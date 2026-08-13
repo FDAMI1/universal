@@ -9,9 +9,9 @@ export interface RawNotificationEvent {
   subText: string | null;
 }
 
-export interface PaymentNotificationListenerEvents {
-  onPaymentNotification(event: RawNotificationEvent): void;
-}
+export type PaymentNotificationListenerEvents = {
+  onPaymentNotification: (event: RawNotificationEvent) => void;
+} & Record<string, (...args: any[]) => void>;
 
 declare class PaymentNotificationListenerModule extends NativeModule<PaymentNotificationListenerEvents> {
   isNotificationAccessGranted(): boolean;
