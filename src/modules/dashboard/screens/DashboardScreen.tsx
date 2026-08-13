@@ -4,14 +4,13 @@ import { Volume2, Wifi, WifiOff } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
-import { colors, spacing, borderRadius, formatCurrency } from "@shared/theme";
+import { useTodayStats } from "@modules/dashboard/hooks/useTodayStats";
+import { colors, spacing, borderRadius, formatCurrency, getRelativeTime } from "@shared/theme";
 
 export default function DashboardScreen() {
   const { pairedDevice, connectionStatus } = useDeviceStore();
   const isConnected = connectionStatus === "connected";
-
-  const todayCount = 0;
-  const todayTotalPaise = 0;
+  const { count: todayCount, totalPaise: todayTotalPaise, lastPayment } = useTodayStats();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -48,7 +47,14 @@ export default function DashboardScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>Last Payment</Text>
-        <Text style={styles.cardMeta}>No payments yet</Text>
+        {lastPayment ? (
+          <Text style={styles.cardMeta}>
+            {formatCurrency(lastPayment.amount, lastPayment.currency)} ·{" "}
+            {getRelativeTime(lastPayment.timestamp)}
+          </Text>
+        ) : (
+          <Text style={styles.cardMeta}>No payments yet</Text>
+        )}
       </View>
 
       <Pressable style={styles.testButton} disabled={!isConnected}>

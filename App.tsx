@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import AppNavigator from "./src/navigation/AppNavigator";
+import { usePaymentPipelineRunner } from "./src/modules/payment-parser/usePaymentPipelineRunner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -13,12 +14,18 @@ const queryClient = new QueryClient({
   },
 });
 
+function PaymentPipelineBoundary() {
+  usePaymentPipelineRunner();
+  return null;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <StatusBar style="dark" />
         <NavigationContainer>
+          <PaymentPipelineBoundary />
           <AppNavigator />
         </NavigationContainer>
       </SafeAreaProvider>
