@@ -30,8 +30,14 @@ export function usePaymentPipelineRunner() {
 
   useEffect(() => {
     const unsubscribe = subscribeToPayments((event: RawNotificationEvent) => {
-      const { enabledSources, minimumAmount, duplicateTimeoutSeconds } =
-        useSettingsStore.getState();
+      const {
+        enabledSources,
+        googlePayMode,
+        smsEnabled,
+        smsPackageName,
+        minimumAmount,
+        duplicateTimeoutSeconds,
+      } = useSettingsStore.getState();
       const { pairedDevice } = useDeviceStore.getState();
 
       const enabledSourcePackages = new Set(
@@ -42,6 +48,9 @@ export function usePaymentPipelineRunner() {
           return false;
         }),
       );
+      if (smsEnabled && smsPackageName) {
+        enabledSourcePackages.add(smsPackageName);
+      }
 
       const result = runPaymentPipeline(
         event,
@@ -50,6 +59,8 @@ export function usePaymentPipelineRunner() {
           minimumAmountPaise: minimumAmount,
           duplicateTimeoutSeconds,
           enabledSourcePackages,
+          treatGooglePayAsPersonal: googlePayMode === "personal",
+          smsPackageName: smsEnabled ? smsPackageName : undefined,
         },
         detectorRef.current,
         Date.now(),

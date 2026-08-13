@@ -6,34 +6,99 @@ import {
   Pressable,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { QrCode, Keyboard, Trash2, CheckCircle2 } from "lucide-react-native";
+import { QrCode, Keyboard, Trash2, CheckCircle2, Pencil, Radio } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
 import { useDevicePairing } from "@modules/pairing/hooks/useDevicePairing";
+import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager";
 import { colors, spacing, borderRadius } from "@shared/theme";
 
 function PairedDeviceCard() {
-  const { pairedDevice, connectionStatus, setPairedDevice } = useDeviceStore();
+  const { pairedDevice, connectionStatus, setPairedDevice, renameDevice } = useDeviceStore();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(pairedDevice?.name ?? "");
+  const [isTesting, setIsTesting] = useState(false);
+
   if (!pairedDevice) return null;
+
+  const handleRemove = () => {
+    Alert.alert("Remove device", `Unpair "${pairedDevice.name}" from this phone?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: () => setPairedDevice(null) },
+    ]);
+  };
+
+  const handleTestConnection = async () => {
+    const connection = getActiveEsp32Connection();
+    if (!connection) return;
+    setIsTesting(true);
+    try {
+      await connection.send({
+        type: "test_speaker",
+        deviceId: pairedDevice.id,
+        authToken: pairedDevice.authToken,
+      });
+      Alert.alert("Test sent", "Check that your speaker played a sound.");
+    } catch (error) {
+      Alert.alert("Test failed", error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   return (
     <View style={styles.card}>
       <View style={styles.cardHeaderRow}>
         <CheckCircle2 size={20} color={colors.success[600]} />
-        <Text style={styles.cardTitle}>{pairedDevice.name}</Text>
+        {isEditingName ? (
+          <TextInput
+            style={styles.nameInput}
+            value={nameDraft}
+            onChangeText={setNameDraft}
+            autoFocus
+            onSubmitEditing={() => {
+              if (nameDraft.trim()) renameDevice(nameDraft.trim());
+              setIsEditingName(false);
+            }}
+            onBlur={() => setIsEditingName(false)}
+          />
+        ) : (
+          <Text style={styles.cardTitle}>{pairedDevice.name}</Text>
+        )}
+        <Pressable
+          onPress={() => {
+            setNameDraft(pairedDevice.name);
+            setIsEditingName(true);
+          }}
+          hitSlop={8}
+        >
+          <Pencil size={14} color={colors.slate[400]} />
+        </Pressable>
       </View>
       <StatusBadge
         label={connectionStatus === "connected" ? "Connected" : "Not connected"}
         tone={connectionStatus === "connected" ? "success" : "neutral"}
       />
       <Text style={styles.cardMeta}>{pairedDevice.ipAddress}</Text>
+
       <Pressable
-        style={styles.removeButton}
-        onPress={() => setPairedDevice(null)}
+        style={styles.testConnectionButton}
+        onPress={handleTestConnection}
+        disabled={connectionStatus !== "connected" || isTesting}
       >
+        {isTesting ? (
+          <ActivityIndicator size="small" color={colors.primary[600]} />
+        ) : (
+          <Radio size={16} color={colors.primary[600]} />
+        )}
+        <Text style={styles.testConnectionLabel}>Test connection</Text>
+      </Pressable>
+
+      <Pressable style={styles.removeButton} onPress={handleRemove}>
         <Trash2 size={16} color={colors.error[600]} />
         <Text style={styles.removeButtonLabel}>Remove device</Text>
       </Pressable>
@@ -209,6 +274,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: colors.slate[800],
+    flex: 1,
+  },
+  nameInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: colors.slate[800],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.primary[200],
+    paddingVertical: 0,
   },
   cardText: {
     fontSize: 13,
@@ -264,6 +339,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   linkButtonLabel: {
+    color: colors.primary[600],
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  testConnectionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+    borderRadius: borderRadius.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  testConnectionLabel: {
     color: colors.primary[600],
     fontWeight: "600",
     fontSize: 13,
