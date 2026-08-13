@@ -1,16 +1,35 @@
-import React from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
 import { Volume2, Wifi, WifiOff } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
 import { useTodayStats } from "@modules/dashboard/hooks/useTodayStats";
+import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager";
 import { colors, spacing, borderRadius, formatCurrency, getRelativeTime } from "@shared/theme";
 
 export default function DashboardScreen() {
   const { pairedDevice, connectionStatus } = useDeviceStore();
   const isConnected = connectionStatus === "connected";
   const { count: todayCount, totalPaise: todayTotalPaise, lastPayment } = useTodayStats();
+  const [isTesting, setIsTesting] = useState(false);
+
+  const handleTestSpeaker = useCallback(async () => {
+    const connection = getActiveEsp32Connection();
+    if (!connection || !pairedDevice) return;
+    setIsTesting(true);
+    try {
+      await connection.send({
+        type: "test_speaker",
+        deviceId: pairedDevice.id,
+        authToken: pairedDevice.authToken,
+      });
+    } catch (error) {
+      Alert.alert("Couldn't reach the speaker", error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsTesting(false);
+    }
+  }, [pairedDevice]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -57,9 +76,13 @@ export default function DashboardScreen() {
         )}
       </View>
 
-      <Pressable style={styles.testButton} disabled={!isConnected}>
+      <Pressable
+        style={[styles.testButton, !isConnected && styles.testButtonDisabled]}
+        disabled={!isConnected || isTesting}
+        onPress={handleTestSpeaker}
+      >
         <Volume2 size={18} color={colors.white} />
-        <Text style={styles.testButtonLabel}>Test Speaker</Text>
+        <Text style={styles.testButtonLabel}>{isTesting ? "Sending…" : "Test Speaker"}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -124,6 +147,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
     marginHorizontal: spacing.lg,
+  },
+  testButtonDisabled: {
+    opacity: 0.5,
   },
   testButtonLabel: {
     color: colors.white,

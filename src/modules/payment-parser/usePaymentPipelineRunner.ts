@@ -8,6 +8,7 @@ import { runPaymentPipeline } from "./paymentPipeline";
 import { DuplicateDetector } from "./duplicateDetector";
 import { RawNotificationEvent } from "@native/payment-notification-listener";
 import { generateId } from "@shared/utils/id";
+import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager";
 
 const SOURCE_PACKAGE_MAP: Record<string, boolean> = {
   "com.phonepe.app": true,
@@ -59,13 +60,32 @@ export function usePaymentPipelineRunner() {
         usePaymentHistoryStore
           .getState()
           .addPayment(payment)
-          .then(() => {
+          .then((entry) => {
             useActivityLogStore.getState().addEntry({
               id: generateId(),
               type: "payment",
               at: new Date().toISOString(),
               payment,
             });
+
+            const connection = getActiveEsp32Connection();
+            if (!pairedDevice || !connection) return;
+            connection
+              .send({
+                type: "payment",
+                deviceId: pairedDevice.id,
+                authToken: pairedDevice.authToken,
+                payment,
+              })
+              .then(() => usePaymentHistoryStore.getState().markAnnounced(entry.id))
+              .catch((error) => {
+                useActivityLogStore.getState().addEntry({
+                  id: generateId(),
+                  type: "error",
+                  at: new Date().toISOString(),
+                  message: `failed to send payment to speaker: ${String(error)}`,
+                });
+              });
           })
           .catch((error) => {
             useActivityLogStore.getState().addEntry({

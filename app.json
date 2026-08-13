@@ -24,7 +24,13 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Universal Speaker to use the camera to scan your ESP32's pairing QR code."
+        }
+      ]
     ]
   }
 }
