@@ -1,6 +1,6 @@
-import React from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
-import { Receipt } from "lucide-react-native";
+import React, { useCallback } from "react";
+import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
+import { Receipt, Trash2 } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import EmptyState from "@shared/components/EmptyState";
 import { usePaymentHistoryStore } from "@shared/store/usePaymentHistoryStore";
@@ -32,6 +32,18 @@ function HistoryRow({ entry }: { entry: PaymentHistoryEntry }) {
 
 export default function PaymentHistoryScreen() {
   const entries = usePaymentHistoryStore((state) => state.entries);
+  const clear = usePaymentHistoryStore((state) => state.clear);
+
+  const handleClear = useCallback(() => {
+    Alert.alert(
+      "Clear payment history",
+      "This permanently deletes all recorded payments from this device. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Clear", style: "destructive", onPress: () => clear() },
+      ],
+    );
+  }, [clear]);
 
   if (entries.length === 0) {
     return (
@@ -48,7 +60,12 @@ export default function PaymentHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Payment History" subtitle="Stored locally on this device" />
+      <View style={styles.headerRow}>
+        <ScreenHeader title="Payment History" subtitle="Stored locally on this device" />
+        <Pressable style={styles.clearButton} onPress={handleClear} hitSlop={8}>
+          <Trash2 size={18} color={colors.error[600]} />
+        </Pressable>
+      </View>
       <FlatList
         data={entries}
         keyExtractor={(entry) => entry.id}
@@ -63,6 +80,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.slate[50],
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingRight: spacing.lg,
+  },
+  clearButton: {
+    padding: spacing.sm,
   },
   listContent: {
     paddingHorizontal: spacing.lg,

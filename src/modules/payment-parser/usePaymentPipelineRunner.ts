@@ -55,13 +55,26 @@ export function usePaymentPipelineRunner() {
       );
 
       if (result.payment) {
-        usePaymentHistoryStore.getState().addPayment(result.payment);
-        useActivityLogStore.getState().addEntry({
-          id: generateId(),
-          type: "payment",
-          at: new Date().toISOString(),
-          payment: result.payment,
-        });
+        const payment = result.payment;
+        usePaymentHistoryStore
+          .getState()
+          .addPayment(payment)
+          .then(() => {
+            useActivityLogStore.getState().addEntry({
+              id: generateId(),
+              type: "payment",
+              at: new Date().toISOString(),
+              payment,
+            });
+          })
+          .catch((error) => {
+            useActivityLogStore.getState().addEntry({
+              id: generateId(),
+              type: "error",
+              at: new Date().toISOString(),
+              message: `failed to persist payment: ${String(error)}`,
+            });
+          });
       } else {
         useActivityLogStore.getState().addEntry({
           id: generateId(),
