@@ -1,4 +1,4 @@
-<manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
@@ -13,7 +13,7 @@
       android:name=".PaymentListenerService"
       android:label="Universal Speaker"
       android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-      android:exported="false">
+      android:exported="true">
       <intent-filter>
         <action android:name="android.service.notification.NotificationListenerService" />
       </intent-filter>
