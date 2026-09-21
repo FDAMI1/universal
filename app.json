@@ -28,9 +28,16 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Universal Speaker to use the camera to scan your ESP32's pairing QR code."
+          "cameraPermission": "Allow Universal Speaker to use the camera to scan your ESP32's pairing QR code.",
+          "recordAudioAndroid": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a5b7ebf6-74e0-4f9f-9cdf-e809228dda30"
+      }
+    },
+    "owner": "abdullah7783s-team"
   }
 }
