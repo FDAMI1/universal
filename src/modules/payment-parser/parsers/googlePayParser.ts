@@ -26,7 +26,9 @@ export function parseGooglePayNotification(
   const isIncoming = Boolean(paidYouMatch) || looksLikeIncomingPayment(text);
   if (!isIncoming) return null;
 
-  const txnMatch = text.match(/(?:UPI transaction ID|txn)[\s:]*([A-Za-z0-9]{6,})/i);
+  const txnMatch = text.match(
+    /(?:UPI transaction ID|txn)[\s:]*([A-Za-z0-9]{6,})/i,
+  );
 
   return {
     amount,

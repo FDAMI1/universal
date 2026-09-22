@@ -29,7 +29,9 @@ export function parseBankSmsNotification(
   const amount = extractAmountPaise(text);
   if (amount === null) return null;
 
-  const refMatch = text.match(/(?:Ref(?:erence)?\s*(?:No\.?)?|UTR)[\s:]*([A-Za-z0-9]{6,})/i);
+  const refMatch = text.match(
+    /(?:Ref(?:erence)?\s*(?:No\.?)?|UTR)[\s:]*([A-Za-z0-9]{6,})/i,
+  );
 
   return {
     amount,

@@ -80,7 +80,9 @@ describe("payments table schema", () => {
     expect(rowToAnnouncedBoolean(row.announced)).toBe(false);
 
     db.prepare("UPDATE payments SET announced = 1 WHERE id = ?").run("row-1");
-    const updated = db.prepare("SELECT * FROM payments WHERE id = ?").get("row-1") as any;
+    const updated = db
+      .prepare("SELECT * FROM payments WHERE id = ?")
+      .get("row-1") as any;
     expect(rowToAnnouncedBoolean(updated.announced)).toBe(true);
 
     db.close();

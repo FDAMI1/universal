@@ -9,7 +9,14 @@ import {
   Alert,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { QrCode, Keyboard, Trash2, CheckCircle2, Pencil, Radio } from "lucide-react-native";
+import {
+  QrCode,
+  Keyboard,
+  Trash2,
+  CheckCircle2,
+  Pencil,
+  Radio,
+} from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
@@ -18,7 +25,8 @@ import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager"
 import { colors, spacing, borderRadius } from "@shared/theme";
 
 function PairedDeviceCard() {
-  const { pairedDevice, connectionStatus, setPairedDevice, renameDevice } = useDeviceStore();
+  const { pairedDevice, connectionStatus, setPairedDevice, renameDevice } =
+    useDeviceStore();
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(pairedDevice?.name ?? "");
   const [isTesting, setIsTesting] = useState(false);
@@ -26,10 +34,18 @@ function PairedDeviceCard() {
   if (!pairedDevice) return null;
 
   const handleRemove = () => {
-    Alert.alert("Remove device", `Unpair "${pairedDevice.name}" from this phone?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Remove", style: "destructive", onPress: () => setPairedDevice(null) },
-    ]);
+    Alert.alert(
+      "Remove device",
+      `Unpair "${pairedDevice.name}" from this phone?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => setPairedDevice(null),
+        },
+      ],
+    );
   };
 
   const handleTestConnection = async () => {
@@ -44,7 +60,10 @@ function PairedDeviceCard() {
       });
       Alert.alert("Test sent", "Check that your speaker played a sound.");
     } catch (error) {
-      Alert.alert("Test failed", error instanceof Error ? error.message : String(error));
+      Alert.alert(
+        "Test failed",
+        error instanceof Error ? error.message : String(error),
+      );
     } finally {
       setIsTesting(false);
     }
@@ -146,7 +165,10 @@ function ManualPairForm({
         keyboardType="number-pad"
       />
       <Pressable
-        style={[styles.submitButton, (!deviceId || !ip || !pin) && styles.submitButtonDisabled]}
+        style={[
+          styles.submitButton,
+          (!deviceId || !ip || !pin) && styles.submitButtonDisabled,
+        ]}
         disabled={!deviceId || !ip || !pin || isPairing}
         onPress={() => onSubmit(deviceId, ip, pin)}
       >
@@ -212,7 +234,10 @@ export default function DevicePairingScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Device Pairing" subtitle="Connect your ESP32 sound box" />
+      <ScreenHeader
+        title="Device Pairing"
+        subtitle="Connect your ESP32 sound box"
+      />
 
       {pairedDevice ? (
         <PairedDeviceCard />
@@ -234,12 +259,17 @@ export default function DevicePairingScreen() {
               onPress={() => setShowManualEntry(true)}
             >
               <Keyboard size={16} color={colors.primary[600]} />
-              <Text style={styles.linkButtonLabel}>Enter details manually instead</Text>
+              <Text style={styles.linkButtonLabel}>
+                Enter details manually instead
+              </Text>
             </Pressable>
           )}
 
           {showManualEntry ? (
-            <Pressable style={styles.linkButton} onPress={() => setShowManualEntry(false)}>
+            <Pressable
+              style={styles.linkButton}
+              onPress={() => setShowManualEntry(false)}
+            >
               <QrCode size={16} color={colors.primary[600]} />
               <Text style={styles.linkButtonLabel}>Scan QR code instead</Text>
             </Pressable>

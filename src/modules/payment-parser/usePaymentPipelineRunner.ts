@@ -42,7 +42,8 @@ export function usePaymentPipelineRunner() {
 
       const enabledSourcePackages = new Set(
         Object.keys(SOURCE_PACKAGE_MAP).filter((pkg) => {
-          if (pkg.startsWith("com.phonepe")) return enabledSources.phonepe_business;
+          if (pkg.startsWith("com.phonepe"))
+            return enabledSources.phonepe_business;
           if (pkg.includes("paytm")) return enabledSources.paytm_business;
           if (pkg.includes("nbu.paisa")) return enabledSources.google_pay;
           return false;
@@ -88,7 +89,9 @@ export function usePaymentPipelineRunner() {
                 authToken: pairedDevice.authToken,
                 payment,
               })
-              .then(() => usePaymentHistoryStore.getState().markAnnounced(entry.id))
+              .then(() =>
+                usePaymentHistoryStore.getState().markAnnounced(entry.id),
+              )
               .catch((error) => {
                 useActivityLogStore.getState().addEntry({
                   id: generateId(),

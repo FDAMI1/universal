@@ -64,7 +64,9 @@ function rowToEntry(row: PaymentRow): PaymentHistoryEntry {
   };
 }
 
-export async function insertPayment(payment: PaymentObject): Promise<PaymentHistoryEntry> {
+export async function insertPayment(
+  payment: PaymentObject,
+): Promise<PaymentHistoryEntry> {
   const db = await getDb();
   const entry: PaymentHistoryEntry = {
     ...payment,
@@ -101,7 +103,9 @@ export async function markAnnounced(id: string): Promise<void> {
   await db.runAsync("UPDATE payments SET announced = 1 WHERE id = ?", [id]);
 }
 
-export async function getRecentPayments(limit = 200): Promise<PaymentHistoryEntry[]> {
+export async function getRecentPayments(
+  limit = 200,
+): Promise<PaymentHistoryEntry[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<PaymentRow>(
     "SELECT * FROM payments ORDER BY timestamp DESC LIMIT ?",

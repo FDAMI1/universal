@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Switch, Pressable, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  Pressable,
+  TextInput,
+} from "react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import {
   useSettingsStore,
@@ -46,12 +54,21 @@ function SourceManagementSection() {
       <SectionTitle>Source Management</SectionTitle>
       <View style={styles.card}>
         {sources.map((source, index) => (
-          <View key={source} style={[styles.row, index < sources.length - 1 && styles.rowDivider]}>
+          <View
+            key={source}
+            style={[
+              styles.row,
+              index < sources.length - 1 && styles.rowDivider,
+            ]}
+          >
             <Text style={styles.rowLabel}>{SOURCE_LABELS[source]}</Text>
             <Switch
               value={enabledSources[source]}
               onValueChange={(value) => setSourceEnabled(source, value)}
-              trackColor={{ true: colors.primary[500], false: colors.slate[200] }}
+              trackColor={{
+                true: colors.primary[500],
+                false: colors.slate[200],
+              }}
             />
           </View>
         ))}
@@ -64,7 +81,10 @@ function SourceManagementSection() {
             {(["business", "personal"] as GooglePayMode[]).map((mode) => (
               <Pressable
                 key={mode}
-                style={[styles.segment, googlePayMode === mode && styles.segmentActive]}
+                style={[
+                  styles.segment,
+                  googlePayMode === mode && styles.segmentActive,
+                ]}
                 onPress={() => setGooglePayMode(mode)}
               >
                 <Text
@@ -101,7 +121,8 @@ function SourceManagementSection() {
               autoCapitalize="none"
             />
             <Text style={styles.helperText}>
-              Varies by phone manufacturer — find it in your SMS app's system settings entry.
+              Varies by phone manufacturer — find it in your SMS app's system
+              settings entry.
             </Text>
           </View>
         )}
@@ -114,14 +135,20 @@ function AnnouncementSettingsSection() {
   const language = useSettingsStore((s) => s.language);
   const volume = useSettingsStore((s) => s.volume);
   const minimumAmount = useSettingsStore((s) => s.minimumAmount);
-  const duplicateTimeoutSeconds = useSettingsStore((s) => s.duplicateTimeoutSeconds);
+  const duplicateTimeoutSeconds = useSettingsStore(
+    (s) => s.duplicateTimeoutSeconds,
+  );
   const setLanguage = useSettingsStore((s) => s.setLanguage);
   const setVolume = useSettingsStore((s) => s.setVolume);
   const setMinimumAmount = useSettingsStore((s) => s.setMinimumAmount);
   const setDuplicateTimeout = useSettingsStore((s) => s.setDuplicateTimeout);
 
-  const [minAmountInput, setMinAmountInput] = useState(String(minimumAmount / 100));
-  const [timeoutInput, setTimeoutInput] = useState(String(duplicateTimeoutSeconds));
+  const [minAmountInput, setMinAmountInput] = useState(
+    String(minimumAmount / 100),
+  );
+  const [timeoutInput, setTimeoutInput] = useState(
+    String(duplicateTimeoutSeconds),
+  );
 
   return (
     <View style={styles.section}>
@@ -133,11 +160,17 @@ function AnnouncementSettingsSection() {
           {LANGUAGES.map((lang) => (
             <Pressable
               key={lang.code}
-              style={[styles.segment, language === lang.code && styles.segmentActive]}
+              style={[
+                styles.segment,
+                language === lang.code && styles.segmentActive,
+              ]}
               onPress={() => setLanguage(lang.code)}
             >
               <Text
-                style={[styles.segmentLabel, language === lang.code && styles.segmentLabelActive]}
+                style={[
+                  styles.segmentLabel,
+                  language === lang.code && styles.segmentLabelActive,
+                ]}
               >
                 {lang.label}
               </Text>
@@ -155,7 +188,12 @@ function AnnouncementSettingsSection() {
               style={[styles.segment, volume === step && styles.segmentActive]}
               onPress={() => setVolume(step)}
             >
-              <Text style={[styles.segmentLabel, volume === step && styles.segmentLabelActive]}>
+              <Text
+                style={[
+                  styles.segmentLabel,
+                  volume === step && styles.segmentLabelActive,
+                ]}
+              >
                 {Math.round(step * 100)}%
               </Text>
             </Pressable>
@@ -202,7 +240,8 @@ function AnnouncementSettingsSection() {
           <Text style={styles.inputSuffix}>seconds</Text>
         </View>
         <Text style={styles.helperText}>
-          Repeated notifications for the same payment within this window are ignored.
+          Repeated notifications for the same payment within this window are
+          ignored.
         </Text>
       </View>
     </View>

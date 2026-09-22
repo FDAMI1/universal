@@ -1,4 +1,7 @@
-import { parseMinimumAmountInput, parseDuplicateTimeoutInput } from "../settingsInputParsing";
+import {
+  parseMinimumAmountInput,
+  parseDuplicateTimeoutInput,
+} from "../settingsInputParsing";
 
 describe("parseMinimumAmountInput", () => {
   it("converts whole rupees to paise", () => {

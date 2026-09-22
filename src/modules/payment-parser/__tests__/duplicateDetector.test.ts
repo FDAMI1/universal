@@ -36,7 +36,9 @@ describe("DuplicateDetector", () => {
   it("does not flag a different transaction ID even with matching amount+source", () => {
     const detector = new DuplicateDetector(30_000);
     detector.isDuplicate(makePayment({ transactionId: "AAA" }), 1_000);
-    expect(detector.isDuplicate(makePayment({ transactionId: "BBB" }), 5_000)).toBe(false);
+    expect(
+      detector.isDuplicate(makePayment({ transactionId: "BBB" }), 5_000),
+    ).toBe(false);
   });
 
   it("does not flag once the window has expired", () => {
@@ -48,7 +50,9 @@ describe("DuplicateDetector", () => {
   it("does not flag a different amount", () => {
     const detector = new DuplicateDetector(30_000);
     detector.isDuplicate(makePayment({ amount: 50000 }), 1_000);
-    expect(detector.isDuplicate(makePayment({ amount: 60000 }), 5_000)).toBe(false);
+    expect(detector.isDuplicate(makePayment({ amount: 60000 }), 5_000)).toBe(
+      false,
+    );
   });
 
   it("does not flag a different source", () => {

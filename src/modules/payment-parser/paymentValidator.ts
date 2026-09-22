@@ -38,7 +38,10 @@ export function validatePayment(
     return { valid: false, reason: "not an incoming payment" };
   }
   if (payment.status !== "success") {
-    return { valid: false, reason: `payment status is "${payment.status}", not "success"` };
+    return {
+      valid: false,
+      reason: `payment status is "${payment.status}", not "success"`,
+    };
   }
   if (payment.amount <= 0) {
     return { valid: false, reason: "amount is zero or invalid" };

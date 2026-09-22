@@ -3,7 +3,13 @@ import { PaymentObject } from "@shared/types/payment";
 
 export type ActivityLogEntry =
   | { id: string; type: "payment"; at: string; payment: PaymentObject }
-  | { id: string; type: "rejected"; at: string; packageName: string; reason: string }
+  | {
+      id: string;
+      type: "rejected";
+      at: string;
+      packageName: string;
+      reason: string;
+    }
   | { id: string; type: "connection"; at: string; message: string }
   | { id: string; type: "error"; at: string; message: string };
 

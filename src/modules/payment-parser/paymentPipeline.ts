@@ -39,7 +39,10 @@ export function runPaymentPipeline(
     smsPackageName: options.smsPackageName,
   });
   if (!parsed) {
-    return { payment: null, rejectedReason: "no parser matched notification content" };
+    return {
+      payment: null,
+      rejectedReason: "no parser matched notification content",
+    };
   }
 
   const validation = validatePayment(parsed, event);

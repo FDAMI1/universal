@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "expo-sqlite/kv-store";
 
-export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+export type ConnectionStatus =
+  "disconnected" | "connecting" | "connected" | "error";
 
 export interface PairedDevice {
   id: string;

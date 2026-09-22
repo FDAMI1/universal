@@ -28,7 +28,10 @@ function makePayment(overrides: Partial<ParsedPayment> = {}): ParsedPayment {
 
 describe("validatePayment", () => {
   it("accepts a successful incoming payment", () => {
-    const result = validatePayment(makePayment(), makeEvent("You received ₹500"));
+    const result = validatePayment(
+      makePayment(),
+      makeEvent("You received ₹500"),
+    );
     expect(result.valid).toBe(true);
   });
 
@@ -57,7 +60,10 @@ describe("validatePayment", () => {
   });
 
   it("rejects a zero amount", () => {
-    const result = validatePayment(makePayment({ amount: 0 }), makeEvent("₹0 received"));
+    const result = validatePayment(
+      makePayment({ amount: 0 }),
+      makeEvent("₹0 received"),
+    );
     expect(result.valid).toBe(false);
   });
 

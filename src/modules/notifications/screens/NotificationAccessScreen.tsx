@@ -25,7 +25,10 @@ export default function NotificationAccessScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Notification Access" subtitle="Required to detect payments" />
+      <ScreenHeader
+        title="Notification Access"
+        subtitle="Required to detect payments"
+      />
 
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
@@ -59,7 +62,9 @@ export default function NotificationAccessScreen() {
 
       <Pressable style={styles.settingsButton} onPress={openSettings}>
         <ExternalLink size={18} color={colors.white} />
-        <Text style={styles.settingsButtonLabel}>Open Notification Access Settings</Text>
+        <Text style={styles.settingsButtonLabel}>
+          Open Notification Access Settings
+        </Text>
       </Pressable>
     </View>
   );

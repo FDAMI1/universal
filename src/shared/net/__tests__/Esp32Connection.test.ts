@@ -18,7 +18,9 @@ describe("computeReconnectDelayMs", () => {
 
   it("never exceeds the maximum delay for any attempt count", () => {
     for (let attempt = 0; attempt < 30; attempt++) {
-      expect(computeReconnectDelayMs(attempt)).toBeLessThanOrEqual(RECONNECT_MAX_DELAY_MS);
+      expect(computeReconnectDelayMs(attempt)).toBeLessThanOrEqual(
+        RECONNECT_MAX_DELAY_MS,
+      );
     }
   });
 });

@@ -23,8 +23,12 @@ export const paytmBusinessParser: NotificationParser = {
     if (amount === null) return null;
     if (!looksLikeIncomingPayment(text)) return null;
 
-    const payerMatch = text.match(/from\s+([A-Za-z0-9.\s]{2,40}?)(?:\.|$|\s+via)/i);
-    const txnMatch = text.match(/(?:order id|txn|transaction)[\s:]*([A-Za-z0-9]{6,})/i);
+    const payerMatch = text.match(
+      /from\s+([A-Za-z0-9.\s]{2,40}?)(?:\.|$|\s+via)/i,
+    );
+    const txnMatch = text.match(
+      /(?:order id|txn|transaction)[\s:]*([A-Za-z0-9]{6,})/i,
+    );
 
     return {
       amount,

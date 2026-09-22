@@ -11,7 +11,12 @@ export const PROTOCOL_VERSION = 1;
 
 export type ClientMessage =
   | { type: "pair"; deviceId: string; authToken: string; pin: string }
-  | { type: "payment"; deviceId: string; authToken: string; payment: PaymentObject }
+  | {
+      type: "payment";
+      deviceId: string;
+      authToken: string;
+      payment: PaymentObject;
+    }
   | { type: "test_speaker"; deviceId: string; authToken: string }
   | { type: "heartbeat"; deviceId: string; authToken: string };
 

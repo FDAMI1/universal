@@ -26,11 +26,17 @@ export function parseNotification(
     return bankSmsParser.parse(event);
   }
 
-  const parser = PARSERS.find((p) => p.packageNames.includes(event.packageName));
+  const parser = PARSERS.find((p) =>
+    p.packageNames.includes(event.packageName),
+  );
   if (!parser) return null;
 
   const result = parser.parse(event);
-  if (result && parser === googlePayParser && options.treatGooglePayAsPersonal) {
+  if (
+    result &&
+    parser === googlePayParser &&
+    options.treatGooglePayAsPersonal
+  ) {
     return { ...result, source: "google_pay_personal" };
   }
   return result;

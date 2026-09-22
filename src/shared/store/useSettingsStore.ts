@@ -7,7 +7,8 @@ import { PaymentSource } from "@shared/types/payment";
 // gets its own toggle. Google Pay personal and business share ONE Android
 // package (see PDR Module 1) — a user has one or the other installed, never
 // both distinctly — so it's a single toggle + a mode, not two toggles.
-export type ToggleableSource = "phonepe_business" | "paytm_business" | "google_pay";
+export type ToggleableSource =
+  "phonepe_business" | "paytm_business" | "google_pay";
 export type GooglePayMode = "business" | "personal";
 
 interface SettingsState {
@@ -57,7 +58,8 @@ export const useSettingsStore = create<SettingsState>()(
       setLanguage: (language) => set({ language }),
       setVolume: (volume) => set({ volume }),
       setMinimumAmount: (amount) => set({ minimumAmount: amount }),
-      setDuplicateTimeout: (seconds) => set({ duplicateTimeoutSeconds: seconds }),
+      setDuplicateTimeout: (seconds) =>
+        set({ duplicateTimeoutSeconds: seconds }),
       setVoiceStyle: (style) => set({ voiceStyle: style }),
     }),
     {

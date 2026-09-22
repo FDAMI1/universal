@@ -9,12 +9,18 @@ interface EmptyStateProps {
   description?: string;
 }
 
-export default function EmptyState({ icon: Icon, title, description }: EmptyStateProps) {
+export default function EmptyState({
+  icon: Icon,
+  title,
+  description,
+}: EmptyStateProps) {
   return (
     <View style={styles.container}>
       <Icon size={40} color={colors.slate[300]} />
       <Text style={styles.title}>{title}</Text>
-      {description ? <Text style={styles.description}>{description}</Text> : null}
+      {description ? (
+        <Text style={styles.description}>{description}</Text>
+      ) : null}
     </View>
   );
 }

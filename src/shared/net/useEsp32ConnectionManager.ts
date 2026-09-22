@@ -21,7 +21,9 @@ export function getActiveEsp32Connection(): Esp32Connection | null {
  */
 export function useEsp32ConnectionManager() {
   const pairedDevice = useDeviceStore((state) => state.pairedDevice);
-  const setConnectionStatus = useDeviceStore((state) => state.setConnectionStatus);
+  const setConnectionStatus = useDeviceStore(
+    (state) => state.setConnectionStatus,
+  );
   const connectionRef = useRef<Esp32Connection | null>(null);
 
   useEffect(() => {

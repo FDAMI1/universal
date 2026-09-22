@@ -2,7 +2,13 @@ import React from "react";
 import { Platform } from "react-native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { LayoutDashboard, Receipt, Settings, ScrollText } from "lucide-react-native";
+import {
+  LayoutDashboard,
+  Receipt,
+  Settings,
+  ScrollText,
+  Speaker,
+} from "lucide-react-native";
 
 import DashboardScreen from "@modules/dashboard/screens/DashboardScreen";
 import PaymentHistoryScreen from "@modules/history/screens/PaymentHistoryScreen";
@@ -13,12 +19,12 @@ import NotificationAccessScreen from "@modules/notifications/screens/Notificatio
 
 export type RootStackParamList = {
   MainTabs: undefined;
-  DevicePairing: undefined;
   NotificationAccess: undefined;
 };
 
 export type MainTabsParamList = {
   Dashboard: undefined;
+  Speaker: undefined;
   History: undefined;
   Logs: undefined;
   Settings: undefined;
@@ -59,24 +65,39 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
+        name="Speaker"
+        component={DevicePairingScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Speaker size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
         name="History"
         component={PaymentHistoryScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Receipt size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Receipt size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="Logs"
         component={LogsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <ScrollText size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <ScrollText size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Settings size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>
@@ -87,8 +108,10 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="MainTabs" component={MainTabs} />
-      <Stack.Screen name="DevicePairing" component={DevicePairingScreen} />
-      <Stack.Screen name="NotificationAccess" component={NotificationAccessScreen} />
+      <Stack.Screen
+        name="NotificationAccess"
+        component={NotificationAccessScreen}
+      />
     </Stack.Navigator>
   );
 }

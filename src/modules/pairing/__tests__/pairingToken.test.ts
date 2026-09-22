@@ -1,5 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { bytesToHexToken, encodeQrPayload, decodeQrPayload } from "../pairingToken";
+import {
+  bytesToHexToken,
+  encodeQrPayload,
+  decodeQrPayload,
+} from "../pairingToken";
 
 // generateAuthToken() itself calls expo-crypto's native getRandomBytesAsync,
 // which isn't available under plain Jest (same boundary as expo-sqlite —
@@ -27,7 +31,11 @@ describe("bytesToHexToken", () => {
 
 describe("encodeQrPayload / decodeQrPayload", () => {
   it("round-trips a valid payload", () => {
-    const payload = { deviceId: "esp32-abc123", ipAddress: "192.168.1.50", pin: "482913" };
+    const payload = {
+      deviceId: "esp32-abc123",
+      ipAddress: "192.168.1.50",
+      pin: "482913",
+    };
     const decoded = decodeQrPayload(encodeQrPayload(payload));
     expect(decoded).toEqual(payload);
   });
@@ -42,7 +50,9 @@ describe("encodeQrPayload / decodeQrPayload", () => {
 
   it("returns null when a field has the wrong type", () => {
     expect(
-      decodeQrPayload(JSON.stringify({ deviceId: "x", ipAddress: "y", pin: 123456 })),
+      decodeQrPayload(
+        JSON.stringify({ deviceId: "x", ipAddress: "y", pin: 123456 }),
+      ),
     ).toBeNull();
   });
 

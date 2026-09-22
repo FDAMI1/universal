@@ -30,7 +30,11 @@ export async function pairWithDevice(
 
     const timeout = setTimeout(() => {
       connection.disconnect();
-      reject(new Error("Pairing timed out — check the device is powered on and nearby"));
+      reject(
+        new Error(
+          "Pairing timed out — check the device is powered on and nearby",
+        ),
+      );
     }, timeoutMs);
 
     const unsubscribe = connection.addListener((event) => {
@@ -69,7 +73,11 @@ export async function pairWithDevice(
         clearTimeout(timeout);
         unsubscribe();
         connection.disconnect();
-        reject(new Error("Could not reach the device — check it's on the same network"));
+        reject(
+          new Error(
+            "Could not reach the device — check it's on the same network",
+          ),
+        );
       }
     });
 

@@ -1,11 +1,24 @@
 import React, { useCallback } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  Alert,
+} from "react-native";
 import { Receipt, Trash2 } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import EmptyState from "@shared/components/EmptyState";
 import { usePaymentHistoryStore } from "@shared/store/usePaymentHistoryStore";
 import { PaymentHistoryEntry } from "@shared/types/payment";
-import { colors, spacing, borderRadius, formatCurrency, formatDateTime } from "@shared/theme";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  formatCurrency,
+  formatDateTime,
+} from "@shared/theme";
 
 const SOURCE_LABELS: Record<PaymentHistoryEntry["source"], string> = {
   phonepe_business: "PhonePe Business",
@@ -19,7 +32,9 @@ function HistoryRow({ entry }: { entry: PaymentHistoryEntry }) {
   return (
     <View style={styles.row}>
       <View style={styles.rowText}>
-        <Text style={styles.rowAmount}>{formatCurrency(entry.amount, entry.currency)}</Text>
+        <Text style={styles.rowAmount}>
+          {formatCurrency(entry.amount, entry.currency)}
+        </Text>
         <Text style={styles.rowMeta}>
           {SOURCE_LABELS[entry.source]}
           {entry.payer ? ` · ${entry.payer}` : ""}
@@ -48,7 +63,10 @@ export default function PaymentHistoryScreen() {
   if (entries.length === 0) {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="Payment History" subtitle="Stored locally on this device" />
+        <ScreenHeader
+          title="Payment History"
+          subtitle="Stored locally on this device"
+        />
         <EmptyState
           icon={Receipt}
           title="No payments recorded yet"
@@ -61,7 +79,10 @@ export default function PaymentHistoryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <ScreenHeader title="Payment History" subtitle="Stored locally on this device" />
+        <ScreenHeader
+          title="Payment History"
+          subtitle="Stored locally on this device"
+        />
         <Pressable style={styles.clearButton} onPress={handleClear} hitSlop={8}>
           <Trash2 size={18} color={colors.error[600]} />
         </Pressable>

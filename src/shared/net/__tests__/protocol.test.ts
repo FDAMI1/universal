@@ -1,8 +1,16 @@
-import { wrapMessage, isCompatibleVersion, PROTOCOL_VERSION } from "../protocol";
+import {
+  wrapMessage,
+  isCompatibleVersion,
+  PROTOCOL_VERSION,
+} from "../protocol";
 
 describe("wrapMessage", () => {
   it("wraps a message with the current protocol version", () => {
-    const message = { type: "heartbeat" as const, deviceId: "d1", authToken: "t1" };
+    const message = {
+      type: "heartbeat" as const,
+      deviceId: "d1",
+      authToken: "t1",
+    };
     expect(wrapMessage(message)).toEqual({ v: PROTOCOL_VERSION, message });
   });
 });

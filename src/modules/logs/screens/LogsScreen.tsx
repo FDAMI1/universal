@@ -3,8 +3,17 @@ import { View, Text, StyleSheet, FlatList } from "react-native";
 import { ScrollText, CheckCircle2, XCircle } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import EmptyState from "@shared/components/EmptyState";
-import { useActivityLogStore, ActivityLogEntry } from "@shared/store/useActivityLogStore";
-import { colors, spacing, borderRadius, formatCurrency, formatDateTime } from "@shared/theme";
+import {
+  useActivityLogStore,
+  ActivityLogEntry,
+} from "@shared/store/useActivityLogStore";
+import {
+  colors,
+  spacing,
+  borderRadius,
+  formatCurrency,
+  formatDateTime,
+} from "@shared/theme";
 
 function LogRow({ entry }: { entry: ActivityLogEntry }) {
   if (entry.type === "payment") {
@@ -51,7 +60,10 @@ export default function LogsScreen() {
   if (entries.length === 0) {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="Logs" subtitle="Connection, payment & announcement activity" />
+        <ScreenHeader
+          title="Logs"
+          subtitle="Connection, payment & announcement activity"
+        />
         <EmptyState
           icon={ScrollText}
           title="No log entries yet"
@@ -63,7 +75,10 @@ export default function LogsScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Logs" subtitle="Connection, payment & announcement activity" />
+      <ScreenHeader
+        title="Logs"
+        subtitle="Connection, payment & announcement activity"
+      />
       <FlatList
         data={entries}
         keyExtractor={(entry) => entry.id}

@@ -20,7 +20,10 @@ type Listener = (event: ConnectionEvent) => void;
 /** Exponential backoff, capped at RECONNECT_MAX_DELAY_MS. Exported as a pure
  * function so the backoff curve can be tested without real timers. */
 export function computeReconnectDelayMs(attempt: number): number {
-  return Math.min(RECONNECT_BASE_DELAY_MS * 2 ** attempt, RECONNECT_MAX_DELAY_MS);
+  return Math.min(
+    RECONNECT_BASE_DELAY_MS * 2 ** attempt,
+    RECONNECT_MAX_DELAY_MS,
+  );
 }
 
 /**
@@ -86,7 +89,10 @@ export class Esp32Connection {
     try {
       socket = new WebSocket(url);
     } catch (error) {
-      this.emit({ type: "log", message: `failed to open socket: ${String(error)}` });
+      this.emit({
+        type: "log",
+        message: `failed to open socket: ${String(error)}`,
+      });
       this.scheduleReconnect();
       return;
     }
@@ -127,7 +133,10 @@ export class Esp32Connection {
     try {
       const envelope = JSON.parse(raw);
       if (!isCompatibleVersion(envelope?.v)) {
-        this.emit({ type: "log", message: `incompatible protocol version: ${envelope?.v}` });
+        this.emit({
+          type: "log",
+          message: `incompatible protocol version: ${envelope?.v}`,
+        });
         return null;
       }
       return envelope.message as ServerMessage;
@@ -147,9 +156,16 @@ export class Esp32Connection {
   private startHeartbeat(): void {
     this.stopHeartbeat();
     this.heartbeatTimer = setInterval(() => {
-      this.send({ type: "heartbeat", deviceId: this.deviceId, authToken: this.authToken });
+      this.send({
+        type: "heartbeat",
+        deviceId: this.deviceId,
+        authToken: this.authToken,
+      });
       this.heartbeatTimeoutTimer = setTimeout(() => {
-        this.emit({ type: "log", message: "heartbeat timed out — reconnecting" });
+        this.emit({
+          type: "log",
+          message: "heartbeat timed out — reconnecting",
+        });
         this.socket?.close();
       }, HEARTBEAT_TIMEOUT_MS);
     }, HEARTBEAT_INTERVAL_MS);

@@ -36,7 +36,9 @@ describe("looksLikeIncomingPayment", () => {
   });
 
   it("rejects text with both signals present", () => {
-    expect(looksLikeIncomingPayment("You paid ₹500, previously received ₹200")).toBe(false);
+    expect(
+      looksLikeIncomingPayment("You paid ₹500, previously received ₹200"),
+    ).toBe(false);
   });
 
   it("rejects neutral text", () => {
