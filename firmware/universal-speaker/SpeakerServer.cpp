@@ -141,6 +141,14 @@ Reply handleMessage(JsonVariantConst root) {
   }
   if (strcmp(type, "heartbeat") == 0) return simpleReply("heartbeat_ack");
   if (strcmp(type, "payment") == 0) return handlePayment(msg["payment"]);
+  if (strcmp(type, "set_volume") == 0) {
+    if (!msg["volume"].is<int>()) return errorReply(422, "volume must be a number from 0 to 100");
+    const int requested = msg["volume"].as<int>();
+    saveVolume(static_cast<uint8_t>(requested < 0 ? 0 : (requested > 100 ? 100 : requested)));
+    AudioPlayer::setGain(config.volume);
+    Serial.printf("[volume] set to %u%%\n", config.volume);
+    return simpleReply("volume_ack");
+  }
   if (strcmp(type, "test_speaker") == 0) {
     AudioPlayer::enqueue(CLIP_TEST_OK);
     return {200, ""};

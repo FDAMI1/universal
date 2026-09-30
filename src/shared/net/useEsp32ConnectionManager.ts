@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
+import { useSettingsStore } from "@shared/store/useSettingsStore";
 import { useActivityLogStore } from "@shared/store/useActivityLogStore";
 import { Esp32Connection } from "./Esp32Connection";
 import { DEFAULT_ESP32_PORT } from "./protocol";
@@ -13,6 +14,24 @@ let activeConnection: Esp32Connection | null = null;
  * background/foreground transitions without being torn down and rebuilt. */
 export function getActiveEsp32Connection(): Esp32Connection | null {
   return activeConnection;
+}
+
+/** Pushes the app's volume setting (0-1) to the speaker as a 0-100 percentage.
+ * No-ops when nothing is paired or the socket is down; the next connect
+ * re-sends it anyway. */
+export async function sendVolumeToSpeaker(): Promise<void> {
+  const device = useDeviceStore.getState().pairedDevice;
+  if (!activeConnection || !device) return;
+  try {
+    await activeConnection.send({
+      type: "set_volume",
+      deviceId: device.id,
+      authToken: device.authToken,
+      volume: Math.round(useSettingsStore.getState().volume * 100),
+    });
+  } catch {
+    // Volume is cosmetic — never let it surface as an error to the user.
+  }
 }
 
 /**
@@ -47,6 +66,9 @@ export function useEsp32ConnectionManager() {
     const unsubscribe = connection.addListener((event) => {
       if (event.type === "status") {
         setConnectionStatus(event.status);
+        // The speaker keeps its own volume across reboots, so re-send ours on
+        // every (re)connect to keep the app's slider and the box in step.
+        if (event.status === "connected") void sendVolumeToSpeaker();
       }
       if (event.type === "log") {
         useActivityLogStore.getState().addEntry({

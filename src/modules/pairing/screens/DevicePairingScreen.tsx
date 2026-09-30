@@ -4,11 +4,15 @@ import {
   Text,
   StyleSheet,
   Pressable,
+  ScrollView,
   TextInput,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@navigation/AppNavigator";
 import {
   QrCode,
   Keyboard,
@@ -16,6 +20,7 @@ import {
   CheckCircle2,
   Pencil,
   Radio,
+  Wifi,
 } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
@@ -224,6 +229,8 @@ export default function DevicePairingScreen() {
   const pairedDevice = useDeviceStore((state) => state.pairedDevice);
   const { isPairing, error, pairFromQrData, pairManually } = useDevicePairing();
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const handleScan = useCallback(
     (data: string) => {
@@ -233,7 +240,11 @@ export default function DevicePairingScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <ScreenHeader
         title="Device Pairing"
         subtitle="Connect your ESP32 sound box"
@@ -243,6 +254,21 @@ export default function DevicePairingScreen() {
         <PairedDeviceCard />
       ) : (
         <>
+          <Pressable
+            style={styles.setupCard}
+            onPress={() => navigation.navigate("SpeakerWifiSetup")}
+            accessibilityRole="button"
+          >
+            <View style={styles.cardHeaderRow}>
+              <Wifi size={18} color={colors.primary[600]} />
+              <Text style={styles.setupTitle}>Set up a new speaker</Text>
+            </View>
+            <Text style={styles.cardText}>
+              Put the speaker on your Wi-Fi and pair it, step by step. Start
+              here if this speaker has never been connected.
+            </Text>
+          </Pressable>
+
           {!showManualEntry && <QrScanner onScan={handleScan} />}
 
           {error ? (
@@ -276,7 +302,7 @@ export default function DevicePairingScreen() {
           ) : null}
         </>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -284,7 +310,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.slate[50],
+  },
+  content: {
     gap: spacing.md,
+    paddingBottom: spacing["3xl"],
   },
   card: {
     backgroundColor: colors.white,
@@ -399,6 +428,21 @@ const styles = StyleSheet.create({
     color: colors.error[600],
     fontWeight: "600",
     fontSize: 13,
+  },
+  setupCard: {
+    backgroundColor: colors.primary[50],
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.primary[100],
+  },
+  setupTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: colors.primary[700],
+    flex: 1,
   },
   errorCard: {
     backgroundColor: colors.error[50],

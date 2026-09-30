@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
@@ -16,10 +16,12 @@ import SettingsScreen from "@modules/settings/screens/SettingsScreen";
 import LogsScreen from "@modules/logs/screens/LogsScreen";
 import DevicePairingScreen from "@modules/pairing/screens/DevicePairingScreen";
 import NotificationAccessScreen from "@modules/notifications/screens/NotificationAccessScreen";
+import SpeakerWifiSetupScreen from "@modules/pairing/screens/SpeakerWifiSetupScreen";
 
 export type RootStackParamList = {
   MainTabs: undefined;
   NotificationAccess: undefined;
+  SpeakerWifiSetup: undefined;
 };
 
 export type MainTabsParamList = {
@@ -33,28 +35,35 @@ export type MainTabsParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<MainTabsParamList>();
 
-const sharedTabOptions = {
-  headerShown: false,
-  tabBarActiveTintColor: "#2563eb",
-  tabBarInactiveTintColor: "#64748b",
-  tabBarStyle: {
-    backgroundColor: "#ffffff",
-    borderTopColor: "#f1f5f9",
-    borderTopWidth: 1,
-    paddingBottom: Platform.OS === "ios" ? 24 : 8,
-    paddingTop: 8,
-    height: Platform.OS === "ios" ? 88 : 64,
-  },
-  tabBarLabelStyle: {
-    fontSize: 11,
-    fontWeight: "600" as const,
-    marginTop: 2,
-  },
-};
+// Gesture bars and home indicators vary by phone, so the bar is sized from the
+// device's own bottom inset rather than a fixed per-platform guess.
+function useTabOptions() {
+  const insets = useSafeAreaInsets();
+  return {
+    headerShown: false,
+    tabBarActiveTintColor: "#2563eb",
+    tabBarInactiveTintColor: "#64748b",
+    tabBarStyle: {
+      backgroundColor: "#ffffff",
+      borderTopColor: "#f1f5f9",
+      borderTopWidth: 1,
+      paddingBottom: insets.bottom + 6,
+      paddingTop: 6,
+      height: 58 + insets.bottom,
+    },
+    tabBarLabelStyle: {
+      fontSize: 11,
+      fontWeight: "600" as const,
+      marginBottom: 2,
+    },
+  };
+}
 
 function MainTabs() {
+  const screenOptions = useTabOptions();
+
   return (
-    <Tab.Navigator screenOptions={sharedTabOptions}>
+    <Tab.Navigator screenOptions={screenOptions}>
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
@@ -111,6 +120,10 @@ export default function AppNavigator() {
       <Stack.Screen
         name="NotificationAccess"
         component={NotificationAccessScreen}
+      />
+      <Stack.Screen
+        name="SpeakerWifiSetup"
+        component={SpeakerWifiSetupScreen}
       />
     </Stack.Navigator>
   );

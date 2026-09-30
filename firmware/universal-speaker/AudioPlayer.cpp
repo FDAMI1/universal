@@ -95,6 +95,8 @@ bool begin(uint8_t gainPercent) {
   return xTaskCreatePinnedToCore(playerTask, "audio", 4096, nullptr, 3, nullptr, 1) == pdPASS;
 }
 
+void setGain(uint8_t gainPercent) { gain = gainPercent > 100 ? 100 : gainPercent; }
+
 bool enqueue(const ClipId* clips, size_t count) {
   if (!queue || count == 0) return false;
   Announcement a;

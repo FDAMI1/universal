@@ -15,9 +15,6 @@
 #include "SetupPortal.h"
 #include "SpeakerServer.h"
 
-// Lower this if the speaker sounds distorted and your amplifier has no volume knob.
-constexpr uint8_t AUDIO_GAIN_PERCENT = 80;
-
 constexpr int BOOT_BUTTON_PIN = 0;
 constexpr int LED_PIN = 2;
 constexpr uint32_t WIFI_BOOT_TIMEOUT_MS = 30 * 1000;
@@ -81,7 +78,7 @@ void setup() {
   pinMode(BOOT_BUTTON_PIN, INPUT_PULLUP);
 
   loadConfig();
-  if (!AudioPlayer::begin(AUDIO_GAIN_PERCENT)) Serial.println("[audio] DAC init failed");
+  if (!AudioPlayer::begin(config.volume)) Serial.println("[audio] DAC init failed");
   Serial.printf("\nUniversal Speaker  Device ID %s  PIN %s\n", config.deviceId.c_str(), config.pin.c_str());
 
   if (!config.hasWifi()) {

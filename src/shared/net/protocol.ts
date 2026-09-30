@@ -18,6 +18,13 @@ export type ClientMessage =
       payment: PaymentObject;
     }
   | { type: "test_speaker"; deviceId: string; authToken: string }
+  // volume is 0-100; the speaker stores it and keeps it across reboots.
+  | {
+      type: "set_volume";
+      deviceId: string;
+      authToken: string;
+      volume: number;
+    }
   | { type: "heartbeat"; deviceId: string; authToken: string };
 
 export type ServerMessage =
@@ -25,6 +32,7 @@ export type ServerMessage =
   | { type: "pair_reject"; reason: string }
   | { type: "payment_ack"; deviceId: string }
   | { type: "heartbeat_ack"; deviceId: string }
+  | { type: "volume_ack"; deviceId: string }
   | { type: "error"; message: string };
 
 export interface WireEnvelope<T> {

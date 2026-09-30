@@ -32,6 +32,7 @@ void loadConfig() {
   config.wifiPassword = prefs.getString("pass", "");
   config.authToken = prefs.getString("token", "");
   config.deviceName = prefs.getString("name", "Universal Speaker");
+  config.volume = prefs.getUChar("vol", DEFAULT_VOLUME_PERCENT);
   config.deviceId = makeDeviceId();
 
   config.pin = prefs.getString("pin", "");
@@ -53,11 +54,18 @@ void savePairing(const String& authToken) {
   prefs.putString("token", authToken);
 }
 
+void saveVolume(uint8_t percent) {
+  config.volume = percent > 100 ? 100 : percent;
+  prefs.putUChar("vol", config.volume);
+}
+
 void factoryReset() {
   prefs.remove("ssid");
   prefs.remove("pass");
   prefs.remove("token");
+  prefs.remove("vol");
   config.wifiSsid = "";
   config.wifiPassword = "";
   config.authToken = "";
+  config.volume = DEFAULT_VOLUME_PERCENT;
 }

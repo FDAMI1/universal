@@ -19,6 +19,7 @@ import {
   parseDuplicateTimeoutInput,
 } from "@modules/settings/settingsInputParsing";
 import { colors, spacing, borderRadius, formatCurrency } from "@shared/theme";
+import { sendVolumeToSpeaker } from "@shared/net/useEsp32ConnectionManager";
 
 const SOURCE_LABELS: Record<ToggleableSource, string> = {
   phonepe_business: "PhonePe Business",
@@ -186,7 +187,11 @@ function AnnouncementSettingsSection() {
             <Pressable
               key={step}
               style={[styles.segment, volume === step && styles.segmentActive]}
-              onPress={() => setVolume(step)}
+              onPress={() => {
+                setVolume(step);
+                // Volume lives on the speaker, so push it there immediately.
+                void sendVolumeToSpeaker();
+              }}
             >
               <Text
                 style={[

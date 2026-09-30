@@ -14,6 +14,9 @@ constexpr size_t MAX_CLIPS_PER_ANNOUNCEMENT = 32;
 // Lower it if the amplifier distorts and has no volume knob.
 bool begin(uint8_t gainPercent);
 
+// Volume, 0-100. Takes effect on the next clip; the app sets this.
+void setGain(uint8_t gainPercent);
+
 // Returns false if the queue is full (announcement dropped).
 bool enqueue(const ClipId* clips, size_t count);
 bool enqueue(ClipId clip);
