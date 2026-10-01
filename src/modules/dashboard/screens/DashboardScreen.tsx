@@ -7,7 +7,14 @@ import {
   Pressable,
   Alert,
 } from "react-native";
-import { BellOff, Volume2, Wifi, WifiOff } from "lucide-react-native";
+import {
+  BellOff,
+  ChevronRight,
+  CircleHelp,
+  Volume2,
+  Wifi,
+  WifiOff,
+} from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@navigation/AppNavigator";
@@ -94,6 +101,20 @@ export default function DashboardScreen() {
         <Text style={styles.cardMeta}>
           {pairedDevice ? pairedDevice.name : "No device paired"}
         </Text>
+
+        <Pressable
+          style={styles.helpRow}
+          onPress={() => navigation.navigate("ConnectGuide")}
+          accessibilityRole="button"
+        >
+          <CircleHelp size={16} color={colors.primary[600]} />
+          <Text style={styles.helpLabel}>
+            {pairedDevice
+              ? "How connecting works"
+              : "How do I connect a speaker?"}
+          </Text>
+          <ChevronRight size={16} color={colors.primary[600]} />
+        </Pressable>
       </View>
 
       <View style={styles.statsRow}>
@@ -170,6 +191,21 @@ const styles = StyleSheet.create({
   cardMeta: {
     fontSize: 13,
     color: colors.slate[500],
+  },
+  helpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.slate[100],
+  },
+  helpLabel: {
+    flex: 1,
+    color: colors.primary[600],
+    fontWeight: "600",
+    fontSize: 13,
   },
   statsRow: {
     flexDirection: "row",

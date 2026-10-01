@@ -12,6 +12,8 @@ const REQUEST_TIMEOUT_MS = 8_000;
 
 export interface PortalStatus {
   state: "idle" | "connecting" | "connected" | "failed";
+  /** True when another phone has already claimed this speaker. */
+  claimed?: boolean;
   ip?: string;
   deviceId?: string;
   pin?: string;
@@ -67,6 +69,12 @@ export async function requestWifiConnect(
 
 export async function readStatus(): Promise<PortalStatus> {
   return (await (await portalFetch("/status")).json()) as PortalStatus;
+}
+
+/** Clears a failed attempt so the user can try different credentials without
+ * power-cycling the speaker. */
+export async function resetAttempt(): Promise<void> {
+  await portalFetch("/reset", { method: "POST" });
 }
 
 /** Tells the speaker to leave setup mode and reboot onto the new network. */

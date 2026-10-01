@@ -65,7 +65,9 @@ Reply handlePair(JsonObjectConst msg) {
   reject["type"] = "pair_reject";
 
   if (!isPairingOpen()) {
-    reject["reason"] = "Speaker is already paired. Press its BOOT button to allow a new phone.";
+    reject["reason"] =
+        "This speaker is already connected to another device. Release it from that phone, or press "
+        "this speaker's BOOT button to allow a new phone.";
     return {403, envelope(reject)};
   }
   if (millis() < pinLockedUntil) {
@@ -141,6 +143,13 @@ Reply handleMessage(JsonVariantConst root) {
   }
   if (strcmp(type, "heartbeat") == 0) return simpleReply("heartbeat_ack");
   if (strcmp(type, "payment") == 0) return handlePayment(msg["payment"]);
+  if (strcmp(type, "unpair") == 0) {
+    savePairing("");
+    openPairingWindow();
+    AudioPlayer::enqueue(CLIP_RESET);
+    Serial.println("[pair] released by the paired phone");
+    return simpleReply("unpair_ack");
+  }
   if (strcmp(type, "set_volume") == 0) {
     if (!msg["volume"].is<int>()) return errorReply(422, "volume must be a number from 0 to 100");
     const int requested = msg["volume"].as<int>();

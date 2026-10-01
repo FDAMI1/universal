@@ -17,11 +17,13 @@ import LogsScreen from "@modules/logs/screens/LogsScreen";
 import DevicePairingScreen from "@modules/pairing/screens/DevicePairingScreen";
 import NotificationAccessScreen from "@modules/notifications/screens/NotificationAccessScreen";
 import SpeakerWifiSetupScreen from "@modules/pairing/screens/SpeakerWifiSetupScreen";
+import ConnectGuideScreen from "@modules/pairing/screens/ConnectGuideScreen";
 
 export type RootStackParamList = {
   MainTabs: undefined;
   NotificationAccess: undefined;
   SpeakerWifiSetup: undefined;
+  ConnectGuide: undefined;
 };
 
 export type MainTabsParamList = {
@@ -125,6 +127,7 @@ export default function AppNavigator() {
         name="SpeakerWifiSetup"
         component={SpeakerWifiSetupScreen}
       />
+      <Stack.Screen name="ConnectGuide" component={ConnectGuideScreen} />
     </Stack.Navigator>
   );
 }

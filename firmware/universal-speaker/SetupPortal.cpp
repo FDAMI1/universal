@@ -20,6 +20,8 @@ DNSServer dns;
 
 volatile State state = State::Idle;
 volatile bool connectRequested = false;
+volatile bool scanRequested = false;
+bool staRetryStopped = false;
 volatile bool finishRequested = false;
 String pendingSsid;
 String pendingPassword;
@@ -94,7 +96,11 @@ void registerRoutes() {
   portal.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/html", PAGE); });
 
   portal.on("/scan", HTTP_GET, [](AsyncWebServerRequest* r) {
-    const int16_t found = WiFi.scanComplete();
+    int16_t found = WiFi.scanComplete();
+    if (found == WIFI_SCAN_FAILED && !scanRequested) {
+      scanRequested = true;  // the scan itself runs in loop(), off this callback
+      found = 0;
+    }
     String json = "[";
     for (int16_t i = 0; i < found; ++i) {
       String ssid = WiFi.SSID(i);
@@ -104,7 +110,6 @@ void registerRoutes() {
       json += '"' + ssid + '"';
     }
     json += ']';
-    if (found != WIFI_SCAN_RUNNING) WiFi.scanNetworks(true);  // refresh for next time
     r->send(200, "application/json", json);
   });
 
@@ -122,10 +127,18 @@ void registerRoutes() {
 
   portal.on("/status", HTTP_GET, [](AsyncWebServerRequest* r) {
     String json = String("{\"state\":\"") + stateName() + "\"";
+    json += config.isPaired() ? ",\"claimed\":true" : ",\"claimed\":false";
     if (state == State::Connected) {
       json += ",\"ip\":\"" + WiFi.localIP().toString() + "\",\"deviceId\":\"" + config.deviceId + "\",\"pin\":\"" + config.pin + "\"";
     }
     r->send(200, "application/json", json + "}");
+  });
+
+  portal.on("/reset", HTTP_POST, [](AsyncWebServerRequest* r) {
+    state = State::Idle;
+    connectRequested = false;
+    WiFi.disconnect();
+    r->send(200, "text/plain", "ok");
   });
 
   portal.on("/finish", HTTP_POST, [](AsyncWebServerRequest* r) {
@@ -141,12 +154,16 @@ void registerRoutes() {
 
 void begin() {
   WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(("Speaker-Setup-" + config.deviceId.substring(4)).c_str());
+  WiFi.setSleep(false);  // modem sleep makes joining the AP slow and flaky
+  // Channel 1, at most 4 phones. Leaving the channel to chance means the AP
+  // can land on a congested one, which is the usual cause of a slow join.
+  WiFi.softAP(("Speaker-Setup-" + config.deviceId.substring(4)).c_str(), nullptr, 1, 0, 4);
   dns.start(53, "*", WiFi.softAPIP());
-  WiFi.scanNetworks(true);
 
-  // If Wi-Fi was configured before (e.g. the router was just off), keep trying
-  // it in the background; loop() restarts into normal mode once it connects.
+  // If Wi-Fi was configured before (e.g. the router was just off), try it once
+  // in the background; loop() restarts into normal mode if it comes back. The
+  // retry stops as soon as a phone joins the AP — a reconnect attempt moves
+  // the radio off the AP's channel and makes setup unreliable.
   if (config.hasWifi()) WiFi.begin(config.wifiSsid.c_str(), config.wifiPassword.c_str());
 
   registerRoutes();
@@ -160,6 +177,18 @@ void begin() {
 void loop() {
   dns.processNextRequest();
   const uint32_t now = millis();
+
+  // A phone is on our access point: stop hunting for the saved network so the
+  // radio stays on the AP channel until setup is done.
+  if (!staRetryStopped && state == State::Idle && WiFi.softAPgetStationNum() > 0) {
+    staRetryStopped = true;
+    if (WiFi.status() != WL_CONNECTED) WiFi.disconnect();
+  }
+
+  if (scanRequested && state != State::Connecting) {
+    scanRequested = false;
+    WiFi.scanNetworks(true);
+  }
 
   if (connectRequested) {
     connectRequested = false;

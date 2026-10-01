@@ -19,7 +19,7 @@ import {
   Trash2,
   CheckCircle2,
   Pencil,
-  Radio,
+  Volume2,
   Wifi,
 } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
@@ -40,14 +40,36 @@ function PairedDeviceCard() {
 
   const handleRemove = () => {
     Alert.alert(
-      "Remove device",
-      `Unpair "${pairedDevice.name}" from this phone?`,
+      "Release speaker",
+      `Disconnect "${pairedDevice.name}" from this phone? The speaker becomes ` +
+        "available for another phone to connect.",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
+          text: "Release",
           style: "destructive",
-          onPress: () => setPairedDevice(null),
+          onPress: async () => {
+            const connection = getActiveEsp32Connection();
+            if (connection) {
+              try {
+                // Tell the speaker to forget this phone. If it's unreachable,
+                // the user can still hold its BOOT button to reset it.
+                await connection.send({
+                  type: "unpair",
+                  deviceId: pairedDevice.id,
+                  authToken: pairedDevice.authToken,
+                });
+              } catch {
+                Alert.alert(
+                  "Speaker not reachable",
+                  "This phone has been disconnected, but the speaker still " +
+                    "thinks it owns it. Hold its BOOT button for eight " +
+                    "seconds, or press BOOT once to let a new phone pair.",
+                );
+              }
+            }
+            setPairedDevice(null);
+          },
         },
       ],
     );
@@ -63,7 +85,10 @@ function PairedDeviceCard() {
         deviceId: pairedDevice.id,
         authToken: pairedDevice.authToken,
       });
-      Alert.alert("Test sent", "Check that your speaker played a sound.");
+      Alert.alert(
+        "Test sent",
+        "Your speaker should now say that it's ready for payments.",
+      );
     } catch (error) {
       Alert.alert(
         "Test failed",
@@ -110,21 +135,31 @@ function PairedDeviceCard() {
       <Text style={styles.cardMeta}>{pairedDevice.ipAddress}</Text>
 
       <Pressable
-        style={styles.testConnectionButton}
+        style={[
+          styles.testButton,
+          connectionStatus !== "connected" && styles.testButtonDisabled,
+        ]}
         onPress={handleTestConnection}
         disabled={connectionStatus !== "connected" || isTesting}
+        accessibilityRole="button"
+        accessibilityLabel="Play a test announcement on the speaker"
       >
         {isTesting ? (
-          <ActivityIndicator size="small" color={colors.primary[600]} />
+          <ActivityIndicator size="small" color={colors.white} />
         ) : (
-          <Radio size={16} color={colors.primary[600]} />
+          <Volume2 size={18} color={colors.white} />
         )}
-        <Text style={styles.testConnectionLabel}>Test connection</Text>
+        <Text style={styles.testButtonLabel}>
+          {isTesting ? "Playing…" : "Play test announcement"}
+        </Text>
       </Pressable>
+      <Text style={styles.cardMeta}>
+        The speaker says "स्पीकर तैयार है" — speaker is ready.
+      </Text>
 
       <Pressable style={styles.removeButton} onPress={handleRemove}>
         <Trash2 size={16} color={colors.error[600]} />
-        <Text style={styles.removeButtonLabel}>Remove device</Text>
+        <Text style={styles.removeButtonLabel}>Release speaker</Text>
       </Pressable>
     </View>
   );
@@ -402,21 +437,23 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
   },
-  testConnectionButton: {
+  testButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.primary[200],
-    borderRadius: borderRadius.md,
-    paddingVertical: spacing.sm,
-    marginTop: spacing.xs,
+    gap: spacing.sm,
+    backgroundColor: colors.primary[600],
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
   },
-  testConnectionLabel: {
-    color: colors.primary[600],
+  testButtonDisabled: {
+    opacity: 0.5,
+  },
+  testButtonLabel: {
+    color: colors.white,
     fontWeight: "600",
-    fontSize: 13,
+    fontSize: 15,
   },
   removeButton: {
     flexDirection: "row",

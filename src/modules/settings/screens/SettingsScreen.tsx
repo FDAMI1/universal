@@ -8,6 +8,10 @@ import {
   Pressable,
   TextInput,
 } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@navigation/AppNavigator";
+import { ChevronRight, CircleHelp, Wifi } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import {
   useSettingsStore,
@@ -253,12 +257,44 @@ function AnnouncementSettingsSection() {
   );
 }
 
+function SpeakerHelpSection() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  return (
+    <View style={styles.section}>
+      <SectionTitle>Speaker</SectionTitle>
+      <View style={styles.card}>
+        <Pressable
+          style={styles.linkRow}
+          onPress={() => navigation.navigate("ConnectGuide")}
+          accessibilityRole="button"
+        >
+          <CircleHelp size={18} color={colors.slate[600]} />
+          <Text style={styles.linkLabel}>How to connect your speaker</Text>
+          <ChevronRight size={16} color={colors.slate[400]} />
+        </Pressable>
+        <Pressable
+          style={[styles.linkRow, styles.rowDivider]}
+          onPress={() => navigation.navigate("SpeakerWifiSetup")}
+          accessibilityRole="button"
+        >
+          <Wifi size={18} color={colors.slate[600]} />
+          <Text style={styles.linkLabel}>Set up speaker Wi-Fi</Text>
+          <ChevronRight size={16} color={colors.slate[400]} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 export default function SettingsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <ScreenHeader title="Settings" subtitle="Sources & announcements" />
       <SourceManagementSection />
       <AnnouncementSettingsSection />
+      <SpeakerHelpSection />
     </ScrollView>
   );
 }
@@ -289,6 +325,18 @@ const styles = StyleSheet.create({
     borderColor: colors.slate[100],
     padding: spacing.lg,
     gap: spacing.sm,
+  },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  linkLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    color: colors.slate[800],
   },
   row: {
     flexDirection: "row",

@@ -18,6 +18,9 @@ export type ClientMessage =
       payment: PaymentObject;
     }
   | { type: "test_speaker"; deviceId: string; authToken: string }
+  // Releases the speaker so another phone can claim it. The speaker
+  // forgets this phone's token and reopens pairing.
+  | { type: "unpair"; deviceId: string; authToken: string }
   // volume is 0-100; the speaker stores it and keeps it across reboots.
   | {
       type: "set_volume";
@@ -33,6 +36,7 @@ export type ServerMessage =
   | { type: "payment_ack"; deviceId: string }
   | { type: "heartbeat_ack"; deviceId: string }
   | { type: "volume_ack"; deviceId: string }
+  | { type: "unpair_ack"; deviceId: string }
   | { type: "error"; message: string };
 
 export interface WireEnvelope<T> {

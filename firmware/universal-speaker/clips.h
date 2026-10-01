@@ -118,7 +118,7 @@ enum ClipId : uint16_t {
   CLIP_PREFIX_MERCHANT,  // भुगतान प्राप्त हुआ
   CLIP_PREFIX_GPAY,  // गूगल पे पर भुगतान प्राप्त हुआ
   CLIP_PREFIX_BANK,  // बैंक खाते में राशि जमा हुई
-  CLIP_TEST_OK,  // स्पीकर ठीक से काम कर रहा है
+  CLIP_TEST_OK,  // स्पीकर तैयार है। भुगतान की घोषणा के लिए तैयार है।
   CLIP_PAIRED,  // फ़ोन सफलतापूर्वक जुड़ गया
   CLIP_WIFI_OK,  // वाईफ़ाई से जुड़ गया
   CLIP_WIFI_FAIL,  // वाईफ़ाई से नहीं जुड़ पाया

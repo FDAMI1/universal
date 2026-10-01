@@ -49,11 +49,19 @@ If the upload finds no COM port, install the USB driver for the chip on your boa
 
 ## First-time setup
 
+The app does all of this: **Speaker → Set up a new speaker**. On Android 10+ it joins the
+speaker's network itself, takes the Wi-Fi details, and pairs — the phone's Wi-Fi settings
+are never needed. What follows is the same thing done by hand, e.g. from a laptop.
+
 1. Power on. The speaker says "सेटअप मोड चालू है…" and the LED blinks fast.
-2. On your phone, join the Wi-Fi **Speaker-Setup-XXXXXX**. The setup page opens automatically, or open `http://192.168.4.1`.
+2. Join the Wi-Fi **Speaker-Setup-XXXXXX**. The setup page opens automatically, or open `http://192.168.4.1`.
 3. Pick your Wi-Fi or hotspot and enter the password. The page then shows the **Device ID, IP address and PIN**, and the speaker reads the IP and PIN aloud.
-4. Switch your phone back to the same Wi-Fi. In the app, go to **Devices → enter manually**, type the three values, and pair.
+4. Switch back to the same Wi-Fi. In the app, go to **Speaker → enter manually**, type the three values, and pair.
 5. The speaker says "फ़ोन सफलतापूर्वक जुड़ गया". Use **Test Speaker** on the Dashboard to check.
+
+A speaker answers only to the phone that paired with it. A second phone is told
+"already connected to another device" until the first releases it (**Speaker → Release
+speaker**, which sends `unpair`) or someone presses BOOT.
 
 ## Buttons and LED
 
@@ -96,4 +104,6 @@ Matches `src/shared/net/protocol.ts`:
 - HTTP fallback: `POST http://<ip>:8080/message`
 - Every message is `{ "v": 1, "message": {...} }`.
 - The app sets the volume with `set_volume` (0-100); the speaker keeps it across reboots.
+- `unpair` makes the speaker forget the paired phone so another can claim it.
+- Setup portal (AP mode only): `GET /scan`, `POST /connect`, `GET /status`, `POST /reset`, `POST /finish`.
 - Pairing checks the PIN. All other messages need the auth token the phone sent when it paired.
