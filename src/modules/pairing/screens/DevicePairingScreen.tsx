@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -21,11 +21,17 @@ import {
   Pencil,
   Volume2,
   Wifi,
+  Search,
+  Speaker as SpeakerIcon,
 } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
 import { useDevicePairing } from "@modules/pairing/hooks/useDevicePairing";
+import {
+  discoverSpeakers,
+  type DiscoveredSpeaker,
+} from "@modules/pairing/api/discovery";
 import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager";
 import { colors, spacing, borderRadius } from "@shared/theme";
 
@@ -260,10 +266,108 @@ function QrScanner({ onScan }: { onScan: (data: string) => void }) {
   );
 }
 
+function DiscoveryCard({
+  onConnect,
+  isPairing,
+}: {
+  onConnect: (speaker: DiscoveredSpeaker) => void;
+  isPairing: boolean;
+}) {
+  const [speakers, setSpeakers] = useState<DiscoveredSpeaker[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const search = useCallback(async () => {
+    setIsSearching(true);
+    setSpeakers([]);
+    try {
+      // Show each speaker the moment it answers rather than after the sweep.
+      await discoverSpeakers((found) =>
+        setSpeakers((current) =>
+          current.some((s) => s.deviceId === found.deviceId)
+            ? current
+            : [...current, found],
+        ),
+      );
+    } finally {
+      setIsSearching(false);
+      setHasSearched(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    void search();
+  }, [search]);
+
+  const blocked = (speaker: DiscoveredSpeaker) =>
+    speaker.claimed && !speaker.pairingOpen;
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeaderRow}>
+        <Search size={18} color={colors.slate[600]} />
+        <Text style={styles.cardTitle}>Speakers on your Wi-Fi</Text>
+        {isSearching ? (
+          <ActivityIndicator size="small" color={colors.primary[600]} />
+        ) : (
+          <Pressable onPress={search} hitSlop={8}>
+            <Text style={styles.linkButtonLabel}>Search again</Text>
+          </Pressable>
+        )}
+      </View>
+
+      {speakers.map((speaker) => (
+        <View key={speaker.deviceId} style={styles.foundRow}>
+          <SpeakerIcon size={20} color={colors.primary[600]} />
+          <View style={styles.foundText}>
+            <Text style={styles.foundName}>{speaker.deviceName}</Text>
+            <Text style={styles.cardMeta}>
+              {speaker.deviceId} - {speaker.ipAddress}
+            </Text>
+            {blocked(speaker) ? (
+              <Text style={styles.foundWarning}>
+                Already connected to another device. Release it there, or press
+                this speaker's BOOT button once.
+              </Text>
+            ) : null}
+          </View>
+          <Pressable
+            style={[
+              styles.connectButton,
+              (isPairing || blocked(speaker)) && styles.connectButtonDisabled,
+            ]}
+            disabled={isPairing || blocked(speaker)}
+            onPress={() => onConnect(speaker)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.connectButtonLabel}>Connect</Text>
+          </Pressable>
+        </View>
+      ))}
+
+      {isSearching && speakers.length === 0 ? (
+        <Text style={styles.cardText}>
+          Looking for speakers on your network...
+        </Text>
+      ) : null}
+
+      {!isSearching && hasSearched && speakers.length === 0 ? (
+        <Text style={styles.cardText}>
+          No speakers found. Check that the speaker is powered on and that this
+          phone is on the same Wi-Fi it was set up with. A brand-new speaker
+          has no Wi-Fi yet, so use "Set up a new speaker" above.
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 export default function DevicePairingScreen() {
   const pairedDevice = useDeviceStore((state) => state.pairedDevice);
-  const { isPairing, error, pairFromQrData, pairManually } = useDevicePairing();
+  const { isPairing, error, pairFromQrData, pairManually, pairDiscovered } =
+    useDevicePairing();
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -304,7 +408,9 @@ export default function DevicePairingScreen() {
             </Text>
           </Pressable>
 
-          {!showManualEntry && <QrScanner onScan={handleScan} />}
+          <DiscoveryCard onConnect={pairDiscovered} isPairing={isPairing} />
+
+          {showScanner && <QrScanner onScan={handleScan} />}
 
           {error ? (
             <View style={styles.errorCard}>
@@ -314,27 +420,29 @@ export default function DevicePairingScreen() {
 
           {showManualEntry ? (
             <ManualPairForm onSubmit={pairManually} isPairing={isPairing} />
-          ) : (
-            <Pressable
-              style={styles.linkButton}
-              onPress={() => setShowManualEntry(true)}
-            >
-              <Keyboard size={16} color={colors.primary[600]} />
-              <Text style={styles.linkButtonLabel}>
-                Enter details manually instead
-              </Text>
-            </Pressable>
-          )}
-
-          {showManualEntry ? (
-            <Pressable
-              style={styles.linkButton}
-              onPress={() => setShowManualEntry(false)}
-            >
-              <QrCode size={16} color={colors.primary[600]} />
-              <Text style={styles.linkButtonLabel}>Scan QR code instead</Text>
-            </Pressable>
           ) : null}
+
+          <Pressable
+            style={styles.linkButton}
+            onPress={() => setShowManualEntry((shown) => !shown)}
+          >
+            <Keyboard size={16} color={colors.primary[600]} />
+            <Text style={styles.linkButtonLabel}>
+              {showManualEntry
+                ? "Hide manual entry"
+                : "Enter details manually instead"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.linkButton}
+            onPress={() => setShowScanner((shown) => !shown)}
+          >
+            <QrCode size={16} color={colors.primary[600]} />
+            <Text style={styles.linkButtonLabel}>
+              {showScanner ? "Hide QR scanner" : "Scan a QR code instead"}
+            </Text>
+          </Pressable>
         </>
       )}
     </ScrollView>
@@ -463,6 +571,42 @@ const styles = StyleSheet.create({
   },
   removeButtonLabel: {
     color: colors.error[600],
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  foundRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.slate[100],
+  },
+  foundText: {
+    flex: 1,
+    gap: 2,
+  },
+  foundName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.slate[800],
+  },
+  foundWarning: {
+    fontSize: 12,
+    color: colors.warning[700],
+    lineHeight: 16,
+  },
+  connectButton: {
+    backgroundColor: colors.primary[600],
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  connectButtonDisabled: {
+    opacity: 0.4,
+  },
+  connectButtonLabel: {
+    color: colors.white,
     fontWeight: "600",
     fontSize: 13,
   },

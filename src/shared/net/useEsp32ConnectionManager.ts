@@ -5,6 +5,7 @@ import { useActivityLogStore } from "@shared/store/useActivityLogStore";
 import { Esp32Connection } from "./Esp32Connection";
 import { DEFAULT_ESP32_PORT } from "./protocol";
 import { generateId } from "@shared/utils/id";
+import { findSpeakerById } from "@modules/pairing/api/discovery";
 
 let activeConnection: Esp32Connection | null = null;
 
@@ -34,6 +35,11 @@ export async function sendVolumeToSpeaker(): Promise<void> {
   }
 }
 
+/** Routers hand out new addresses after a power cut, which used to mean a
+ * working setup silently stopped working until the user re-paired by hand.
+ * On a failure, sweep the network for the same Device ID and follow it. */
+const RELOCATE_COOLDOWN_MS = 60_000;
+
 /**
  * Establishes and tears down the ESP32 connection as pairing state changes.
  * Mount once near the app root.
@@ -44,6 +50,7 @@ export function useEsp32ConnectionManager() {
     (state) => state.setConnectionStatus,
   );
   const connectionRef = useRef<Esp32Connection | null>(null);
+  const lastRelocateAt = useRef(0);
 
   useEffect(() => {
     if (!pairedDevice) {
@@ -63,12 +70,34 @@ export function useEsp32ConnectionManager() {
     connectionRef.current = connection;
     activeConnection = connection;
 
+    const relocate = async () => {
+      if (Date.now() - lastRelocateAt.current < RELOCATE_COOLDOWN_MS) return;
+      lastRelocateAt.current = Date.now();
+      const found = await findSpeakerById(pairedDevice.id).catch(() => null);
+      if (!found || found.ipAddress === pairedDevice.ipAddress) return;
+      useActivityLogStore.getState().addEntry({
+        id: generateId(),
+        type: "connection",
+        at: new Date().toISOString(),
+        message: `Speaker moved to ${found.ipAddress}; reconnecting`,
+      });
+      // Writing the new address re-runs this effect with a fresh connection.
+      useDeviceStore.getState().setPairedDevice({
+        ...pairedDevice,
+        ipAddress: found.ipAddress,
+      });
+    };
+
     const unsubscribe = connection.addListener((event) => {
       if (event.type === "status") {
         setConnectionStatus(event.status);
         // The speaker keeps its own volume across reboots, so re-send ours on
         // every (re)connect to keep the app's slider and the box in step.
-        if (event.status === "connected") void sendVolumeToSpeaker();
+        if (event.status === "connected") {
+          lastRelocateAt.current = 0;
+          void sendVolumeToSpeaker();
+        }
+        if (event.status === "error") void relocate();
       }
       if (event.type === "log") {
         useActivityLogStore.getState().addEntry({

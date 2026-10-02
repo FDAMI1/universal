@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { decodeQrPayload } from "../pairingToken";
 import { pairWithDevice } from "../api/pairingApi";
+import type { DiscoveredSpeaker } from "../api/discovery";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
 
 export function useDevicePairing() {
@@ -32,6 +33,21 @@ export function useDevicePairing() {
     [setPairedDevice],
   );
 
+  /** Claims a speaker the app discovered on the network. Unclaimed speakers
+   * need no PIN; one that's already owned still does. */
+  const pairDiscovered = useCallback(
+    async (speaker: DiscoveredSpeaker, pin = "") => {
+      return pairFromQrData(
+        JSON.stringify({
+          deviceId: speaker.deviceId,
+          ipAddress: speaker.ipAddress,
+          pin,
+        }),
+      );
+    },
+    [pairFromQrData],
+  );
+
   const pairManually = useCallback(
     async (deviceId: string, ipAddress: string, pin: string) => {
       return pairFromQrData(JSON.stringify({ deviceId, ipAddress, pin }));
@@ -39,5 +55,5 @@ export function useDevicePairing() {
     [pairFromQrData],
   );
 
-  return { isPairing, error, pairFromQrData, pairManually };
+  return { isPairing, error, pairFromQrData, pairManually, pairDiscovered };
 }
