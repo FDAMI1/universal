@@ -22,6 +22,13 @@ declare class PaymentNotificationListenerModule extends NativeModule<PaymentNoti
   startBridgeService(): void;
   stopBridgeService(): void;
   requestListenerRebind(): void;
+  /** False while Android is allowed to doze the app and stall announcements. */
+  isBatteryOptimizationIgnored(): boolean;
+  /** Opens the exemption prompt (or the list it lives in). False if neither exists. */
+  requestIgnoreBatteryOptimizations(): boolean;
+  /** True on skins (Xiaomi, Oppo, Vivo...) that have their own autostart screen. */
+  hasAutoStartSettings(): boolean;
+  openAutoStartSettings(): boolean;
 }
 
 export default requireNativeModule<PaymentNotificationListenerModule>(

@@ -4,6 +4,21 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+  <!-- Android 13+: lets the app show the ongoing "listening for payments"
+       notification its foreground service needs. -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <!-- Asks to be exempt from battery optimisation, so announcements keep
+       arriving while the phone sits idle. -->
+  <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+  <!-- Needed on Android 11+ to check whether an OEM autostart screen exists. -->
+  <queries>
+    <intent>
+      <action android:name="android.intent.action.MAIN" />
+    </intent>
+  </queries>
+
   <application>
 
     <!-- Reads payment notifications from other apps. Requires the user to grant

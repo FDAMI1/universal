@@ -11,7 +11,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@navigation/AppNavigator";
-import { ChevronRight, CircleHelp, Wifi } from "lucide-react-native";
+import { ChevronRight, CircleHelp, ShieldCheck, Wifi } from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import {
   useSettingsStore,
@@ -281,6 +281,15 @@ function SpeakerHelpSection() {
         >
           <Wifi size={18} color={colors.slate[600]} />
           <Text style={styles.linkLabel}>Set up speaker Wi-Fi</Text>
+          <ChevronRight size={16} color={colors.slate[400]} />
+        </Pressable>
+        <Pressable
+          style={[styles.linkRow, styles.rowDivider]}
+          onPress={() => navigation.navigate("NotificationAccess")}
+          accessibilityRole="button"
+        >
+          <ShieldCheck size={18} color={colors.slate[600]} />
+          <Text style={styles.linkLabel}>App access &amp; permissions</Text>
           <ChevronRight size={16} color={colors.slate[400]} />
         </Pressable>
       </View>

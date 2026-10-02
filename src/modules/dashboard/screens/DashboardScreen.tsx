@@ -18,7 +18,7 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@navigation/AppNavigator";
-import { usePaymentNotificationListener } from "@modules/notifications/hooks/usePaymentNotificationListener";
+import { useAppPermissions } from "@modules/notifications/hooks/useAppPermissions";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
@@ -41,7 +41,8 @@ export default function DashboardScreen() {
     lastPayment,
   } = useTodayStats();
   const [isTesting, setIsTesting] = useState(false);
-  const { accessGranted } = usePaymentNotificationListener();
+  const { allRequiredGranted, grantedCount, requiredCount } =
+    useAppPermissions();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -69,7 +70,7 @@ export default function DashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <ScreenHeader title="Dashboard" subtitle="Universal UPI Speaker" />
 
-      {!accessGranted && (
+      {!allRequiredGranted && (
         <Pressable
           style={[styles.card, styles.warningCard]}
           onPress={() => navigation.navigate("NotificationAccess")}
@@ -77,10 +78,11 @@ export default function DashboardScreen() {
         >
           <View style={styles.cardHeaderRow}>
             <BellOff size={18} color={colors.warning[700]} />
-            <Text style={styles.cardTitle}>Notification access is off</Text>
+            <Text style={styles.cardTitle}>Finish setting up access</Text>
           </View>
           <Text style={styles.cardMeta}>
-            Payments can't be detected. Tap to turn it on.
+            {grantedCount} of {requiredCount} permissions granted. Payments
+            can't be announced until all of them are. Tap to grant.
           </Text>
         </Pressable>
       )}

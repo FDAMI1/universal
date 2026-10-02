@@ -1,22 +1,98 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, Platform } from "react-native";
-import { BellRing, CheckCircle2, ExternalLink } from "lucide-react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Platform,
+  ActivityIndicator,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  CheckCircle2,
+  Circle,
+  CircleAlert,
+  ShieldCheck,
+} from "lucide-react-native";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
-import { usePaymentNotificationListener } from "@modules/notifications/hooks/usePaymentNotificationListener";
+import {
+  useAppPermissions,
+  type PermissionItem,
+} from "@modules/notifications/hooks/useAppPermissions";
 import { colors, spacing, borderRadius } from "@shared/theme";
 
+/**
+ * One screen that grants everything the app needs to announce payments.
+ *
+ * Android has no single prompt for this: notification access and the OEM
+ * autostart screens are settings pages, and only one can be open at a time.
+ * So one button hands over the next missing permission, the list updates when
+ * the user comes back, and the button carries on until nothing is left.
+ */
+function PermissionRow({
+  item,
+  onPress,
+}: {
+  item: PermissionItem;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={styles.row}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${item.title}. ${item.granted ? "Granted" : "Not granted"}. Tap to open.`}
+    >
+      <View style={styles.rowIcon}>
+        {item.granted ? (
+          <CheckCircle2 size={22} color={colors.success[600]} />
+        ) : item.verifiable ? (
+          <Circle size={22} color={colors.slate[300]} />
+        ) : (
+          <CircleAlert size={22} color={colors.warning[600]} />
+        )}
+      </View>
+      <View style={styles.rowText}>
+        <Text style={styles.rowTitle}>{item.title}</Text>
+        <Text style={styles.rowWhy}>{item.why}</Text>
+        {!item.granted ? (
+          <Text style={styles.rowInstruction}>
+            When the settings screen opens: {item.instruction}
+          </Text>
+        ) : null}
+        {!item.verifiable ? (
+          <Text style={styles.rowNote}>
+            Android can't report this one, so it always shows as unconfirmed.
+            Open it once and you're done.
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
 export default function NotificationAccessScreen() {
-  const { accessGranted, listenerConnected, openSettings } =
-    usePaymentNotificationListener();
+  const insets = useSafeAreaInsets();
+  const {
+    items,
+    isWorking,
+    requestNext,
+    requestOne,
+    grantedCount,
+    requiredCount,
+    allRequiredGranted,
+    nextPending,
+  } = useAppPermissions();
 
   if (Platform.OS !== "android") {
     return (
       <View style={styles.container}>
-        <ScreenHeader title="Notification Access" />
+        <ScreenHeader title="App access" />
         <View style={styles.card}>
           <Text style={styles.cardText}>
-            Notification listening is only available on Android.
+            Reading payment notifications is only possible on Android.
           </Text>
         </View>
       </View>
@@ -24,49 +100,77 @@ export default function NotificationAccessScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[
+        styles.content,
+        { paddingBottom: insets.bottom + spacing["3xl"] },
+      ]}
+    >
       <ScreenHeader
-        title="Notification Access"
-        subtitle="Required to detect payments"
+        title="App access"
+        subtitle="What the app needs to announce your payments"
       />
 
       <View style={styles.card}>
         <View style={styles.cardHeaderRow}>
-          {accessGranted ? (
-            <CheckCircle2 size={20} color={colors.success[600]} />
-          ) : (
-            <BellRing size={20} color={colors.warning[600]} />
-          )}
-          <Text style={styles.cardTitle}>Notification Access</Text>
+          <ShieldCheck
+            size={20}
+            color={allRequiredGranted ? colors.success[600] : colors.warning[600]}
+          />
+          <Text style={styles.cardTitle}>
+            {allRequiredGranted ? "All set" : "Setup needed"}
+          </Text>
         </View>
         <StatusBadge
-          label={accessGranted ? "Granted" : "Not granted"}
-          tone={accessGranted ? "success" : "warning"}
+          label={`${grantedCount} of ${requiredCount} granted`}
+          tone={allRequiredGranted ? "success" : "warning"}
         />
         <Text style={styles.cardText}>
-          {accessGranted
-            ? "The app can read payment notifications from your enabled sources."
-            : "Grant notification access so the app can detect payment notifications from PhonePe, Paytm, and Google Pay."}
+          {allRequiredGranted
+            ? "Payments received in your UPI apps will be announced on your speaker."
+            : "Tap the button below. It opens each permission in turn — grant it, " +
+              "press Back, and tap again for the next one."}
         </Text>
       </View>
 
-      {accessGranted ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Listener Status</Text>
-          <StatusBadge
-            label={listenerConnected ? "Running" : "Not running"}
-            tone={listenerConnected ? "success" : "neutral"}
-          />
-        </View>
-      ) : null}
-
-      <Pressable style={styles.settingsButton} onPress={openSettings}>
-        <ExternalLink size={18} color={colors.white} />
-        <Text style={styles.settingsButtonLabel}>
-          Open Notification Access Settings
-        </Text>
+      <Pressable
+        style={[styles.grantButton, allRequiredGranted && styles.grantButtonDone]}
+        onPress={requestNext}
+        disabled={isWorking || !nextPending}
+        accessibilityRole="button"
+      >
+        {isWorking ? (
+          <ActivityIndicator color={colors.white} />
+        ) : (
+          <Text style={styles.grantButtonLabel}>
+            {nextPending
+              ? `Grant access: ${nextPending.title}`
+              : "Everything is granted"}
+          </Text>
+        )}
       </Pressable>
-    </View>
+
+      <View style={styles.card}>
+        {items.map((item) => (
+          <PermissionRow
+            key={item.key}
+            item={item}
+            onPress={() => void requestOne(item.key)}
+          />
+        ))}
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Why each one is needed</Text>
+        <Text style={styles.cardText}>
+          The app reads notifications only from the payment apps you switch on
+          in Settings, takes the amount from them, and sends it to your own
+          speaker over your Wi-Fi. Nothing is sent anywhere else, and the app
+          never sees your bank login or your money.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -74,6 +178,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.slate[50],
+  },
+  content: {
     gap: spacing.md,
   },
   card: {
@@ -98,19 +204,56 @@ const styles = StyleSheet.create({
   cardText: {
     fontSize: 13,
     color: colors.slate[500],
-    lineHeight: 18,
+    lineHeight: 19,
   },
-  settingsButton: {
+  row: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
     gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.slate[100],
+  },
+  rowIcon: {
+    paddingTop: 2,
+  },
+  rowText: {
+    flex: 1,
+    gap: 2,
+  },
+  rowTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.slate[800],
+  },
+  rowWhy: {
+    fontSize: 12,
+    color: colors.slate[500],
+    lineHeight: 17,
+  },
+  rowInstruction: {
+    fontSize: 12,
+    color: colors.primary[700],
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  rowNote: {
+    fontSize: 12,
+    color: colors.warning[700],
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  grantButton: {
     backgroundColor: colors.primary[600],
     borderRadius: borderRadius.lg,
     paddingVertical: spacing.md,
     marginHorizontal: spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  settingsButtonLabel: {
+  grantButtonDone: {
+    backgroundColor: colors.success[600],
+  },
+  grantButtonLabel: {
     color: colors.white,
     fontWeight: "600",
     fontSize: 15,

@@ -1,7 +1,10 @@
 package expo.modules.paymentnotificationlistener
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.PowerManager
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import expo.modules.kotlin.modules.Module
@@ -115,5 +118,105 @@ class PaymentNotificationListenerModule : Module() {
         }
       }
     }
+
+    // Android puts unused apps to sleep, which stops payment announcements
+    // arriving while the phone sits idle on a counter. Exempting the app is
+    // the only reliable fix.
+    Function("isBatteryOptimizationIgnored") {
+      val ctx = appContext.reactContext ?: return@Function false
+      val power = ctx.getSystemService(Context.POWER_SERVICE) as? PowerManager
+      power?.isIgnoringBatteryOptimizations(ctx.packageName) ?: false
+    }
+
+    Function("requestIgnoreBatteryOptimizations") {
+      val ctx = appContext.reactContext ?: return@Function false
+      // The direct request dialog needs the matching permission; when it is
+      // missing or the OEM blocks it, fall through to the settings list.
+      val direct = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+        data = Uri.parse("package:${ctx.packageName}")
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      }
+      if (startIfResolvable(ctx, direct)) return@Function true
+      startIfResolvable(
+        ctx,
+        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+          .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+      )
+    }
+
+    // Xiaomi, Oppo, Vivo and others kill background apps unless the user turns
+    // on "Autostart" in a screen Android itself knows nothing about. There is
+    // no API to read the setting, so the app can only offer to open it.
+    Function("hasAutoStartSettings") {
+      val ctx = appContext.reactContext ?: return@Function false
+      autoStartIntents().any { it.resolveActivity(ctx.packageManager) != null }
+    }
+
+    Function("openAutoStartSettings") {
+      val ctx = appContext.reactContext ?: return@Function false
+      for (intent in autoStartIntents()) {
+        if (startIfResolvable(ctx, intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))) {
+          return@Function true
+        }
+      }
+      // Nothing vendor-specific: the app's own settings page is the best we can do.
+      startIfResolvable(
+        ctx,
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+          data = Uri.parse("package:${ctx.packageName}")
+          addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        },
+      )
+    }
   }
+
+  private fun startIfResolvable(context: Context, intent: Intent): Boolean {
+    if (intent.resolveActivity(context.packageManager) == null) return false
+    return try {
+      context.startActivity(intent)
+      true
+    } catch (e: Exception) {
+      false
+    }
+  }
+
+  /** Autostart screens for the OEM skins that have one, most specific first. */
+  private fun autoStartIntents(): List<Intent> = listOf(
+    Intent().setComponent(
+      ComponentName(
+        "com.miui.securitycenter",
+        "com.miui.permcenter.autostart.AutoStartManagementActivity",
+      ),
+    ),
+    Intent().setComponent(
+      ComponentName(
+        "com.coloros.safecenter",
+        "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+      ),
+    ),
+    Intent().setComponent(
+      ComponentName(
+        "com.coloros.safecenter",
+        "com.coloros.safecenter.startupapp.StartupAppListActivity",
+      ),
+    ),
+    Intent().setComponent(
+      ComponentName(
+        "com.vivo.permissionmanager",
+        "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+      ),
+    ),
+    Intent().setComponent(
+      ComponentName(
+        "com.huawei.systemmanager",
+        "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+      ),
+    ),
+    Intent().setComponent(
+      ComponentName(
+        "com.samsung.android.lool",
+        "com.samsung.android.sm.ui.battery.BatteryActivity",
+      ),
+    ),
+  )
 }
