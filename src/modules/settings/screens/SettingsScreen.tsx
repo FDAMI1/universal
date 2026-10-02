@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "@navigation/AppNavigator";
 import { ChevronRight, CircleHelp, ShieldCheck, Wifi } from "lucide-react-native";
+import { PaymentNotificationListener } from "@native/payment-notification-listener";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import {
   useSettingsStore,
@@ -108,26 +109,32 @@ function SourceManagementSection() {
 
       <View style={styles.card}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Bank SMS (optional)</Text>
+          <Text style={styles.rowLabel}>Bank SMS</Text>
           <Switch
             value={smsEnabled}
             onValueChange={setSmsEnabled}
             trackColor={{ true: colors.primary[500], false: colors.slate[200] }}
           />
         </View>
+        <Text style={styles.helperText}>
+          A UPI payment into a savings account often arrives only as your
+          bank's SMS, so leave this on unless it announces things you don't
+          want. Money going out is never announced.
+        </Text>
         {smsEnabled && (
           <View style={styles.rowDivider}>
-            <Text style={styles.cardLabel}>SMS app package name</Text>
+            <Text style={styles.cardLabel}>Messaging app</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. com.google.android.apps.messaging"
+              placeholder="Detected automatically"
               value={smsPackageName}
               onChangeText={setSmsPackageName}
               autoCapitalize="none"
             />
             <Text style={styles.helperText}>
-              Varies by phone manufacturer — find it in your SMS app's system
-              settings entry.
+              {smsPackageName
+                ? "Detected from your phone. Change it only if bank SMS arrives in a different app."
+                : "Not detected yet — the usual messaging apps are being watched meanwhile."}
             </Text>
           </View>
         )}
@@ -257,6 +264,41 @@ function AnnouncementSettingsSection() {
   );
 }
 
+function TroubleshootingSection() {
+  const [captureAll, setCaptureAll] = useState(() => {
+    try {
+      return PaymentNotificationListener.isCaptureAllNotifications();
+    } catch {
+      return false;
+    }
+  });
+
+  return (
+    <View style={styles.section}>
+      <SectionTitle>Troubleshooting</SectionTitle>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Capture every notification</Text>
+          <Switch
+            value={captureAll}
+            onValueChange={(next) => {
+              PaymentNotificationListener.setCaptureAllNotifications(next);
+              setCaptureAll(next);
+            }}
+            trackColor={{ true: colors.primary[500], false: colors.slate[200] }}
+          />
+        </View>
+        <Text style={styles.helperText}>
+          Turn this on if a payment wasn't announced, then receive one again.
+          Every notification your phone shows will be listed on the Logs screen
+          with its exact wording, which shows why it was missed. Turn it off
+          afterwards — it's noisy.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 function SpeakerHelpSection() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -304,6 +346,7 @@ export default function SettingsScreen() {
       <SourceManagementSection />
       <AnnouncementSettingsSection />
       <SpeakerHelpSection />
+      <TroubleshootingSection />
     </ScrollView>
   );
 }

@@ -39,6 +39,11 @@ function LogRow({ entry }: { entry: ActivityLogEntry }) {
           <Text style={styles.rowMeta}>
             {entry.reason} · {formatDateTime(entry.at)}
           </Text>
+          {entry.text ? (
+            <Text style={styles.rowQuote} selectable>
+              "{entry.text}"
+            </Text>
+          ) : null}
         </View>
       </View>
     );
@@ -118,6 +123,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: colors.slate[800],
+  },
+  rowQuote: {
+    fontSize: 12,
+    color: colors.slate[600],
+    fontStyle: "italic",
+    marginTop: 2,
   },
   rowMeta: {
     fontSize: 12,

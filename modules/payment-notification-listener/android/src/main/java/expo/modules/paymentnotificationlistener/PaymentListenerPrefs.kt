@@ -10,6 +10,7 @@ import android.content.Context
 object PaymentListenerPrefs {
   private const val PREFS_NAME = "payment_notification_listener_prefs"
   private const val KEY_ENABLED_PACKAGES = "enabled_packages"
+  private const val KEY_CAPTURE_ALL = "capture_all"
 
   private fun prefs(context: Context) =
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -28,6 +29,16 @@ object PaymentListenerPrefs {
 
   fun isSourcePackageEnabled(context: Context, packageName: String): Boolean =
     getEnabledSourcePackages(context).contains(packageName)
+
+  /** Troubleshooting: forward notifications from every app, so the user can
+   *  see what their bank or payment app actually posts and which package it
+   *  comes from. Off by default; the app turns it off again on its own. */
+  fun setCaptureAll(context: Context, enabled: Boolean) {
+    prefs(context).edit().putBoolean(KEY_CAPTURE_ALL, enabled).apply()
+  }
+
+  fun isCaptureAll(context: Context): Boolean =
+    prefs(context).getBoolean(KEY_CAPTURE_ALL, false)
 
   // BEST-EFFORT DEFAULTS, UNVERIFIED — placeholders until confirmed on real
   // devices (Settings > Apps > [app] > Advanced > "App details" shows the

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import android.provider.Telephony
 import android.service.notification.NotificationListenerService
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -117,6 +118,26 @@ class PaymentNotificationListenerModule : Module() {
           // Best-effort — the user can still fix this via system settings.
         }
       }
+    }
+
+    // Bank credit alerts arrive as SMS, shown by whichever messaging app the
+    // phone uses. Asking the user to type that package name is a trap, so read
+    // it from the OS.
+    Function("getDefaultSmsPackage") {
+      val ctx = appContext.reactContext ?: return@Function null
+      Telephony.Sms.getDefaultSmsPackage(ctx)
+    }
+
+    Function("setCaptureAllNotifications") { enabled: Boolean ->
+      val ctx = appContext.reactContext
+      if (ctx != null) {
+        PaymentListenerPrefs.setCaptureAll(ctx, enabled)
+      }
+    }
+
+    Function("isCaptureAllNotifications") {
+      val ctx = appContext.reactContext ?: return@Function false
+      PaymentListenerPrefs.isCaptureAll(ctx)
     }
 
     // Android puts unused apps to sleep, which stops payment announcements

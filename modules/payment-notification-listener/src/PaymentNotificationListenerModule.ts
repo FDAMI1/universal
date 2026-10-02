@@ -22,6 +22,11 @@ declare class PaymentNotificationListenerModule extends NativeModule<PaymentNoti
   startBridgeService(): void;
   stopBridgeService(): void;
   requestListenerRebind(): void;
+  /** The phone's messaging app, which is what shows bank SMS. Null if unknown. */
+  getDefaultSmsPackage(): string | null;
+  /** Troubleshooting: forward notifications from every app, not just payment ones. */
+  setCaptureAllNotifications(enabled: boolean): void;
+  isCaptureAllNotifications(): boolean;
   /** False while Android is allowed to doze the app and stall announcements. */
   isBatteryOptimizationIgnored(): boolean;
   /** Opens the exemption prompt (or the list it lives in). False if neither exists. */

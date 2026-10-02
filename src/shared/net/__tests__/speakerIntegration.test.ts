@@ -113,9 +113,28 @@ function tell(message: ClientMessage): Promise<void> {
 
 describeHardware("speaker integration", () => {
   let deviceId = "";
+  /** A speaker a real phone owns is left alone: claiming it here would kick
+   * that phone off. Those tests report as skipped instead. */
+  let ownedByAPhone = false;
 
-  // A previous run may still be mid-announcement; start from silence.
-  beforeAll(waitForSpeech);
+  beforeAll(async () => {
+    // A previous run may still be mid-announcement; start from silence.
+    await waitForSpeech();
+    const status = (await getJson("/whoami")) as {
+      claimed?: boolean;
+      pairingOpen?: boolean;
+    };
+    ownedByAPhone = status.claimed === true && status.pairingOpen !== true;
+    if (ownedByAPhone) {
+      console.warn(
+        "Speaker is paired with a phone — skipping the tests that need to " +
+          "claim it. Release it in the app, or press BOOT, to run them all.",
+      );
+    }
+  });
+
+  /** Returns true when the test body should be skipped. */
+  const needsClaim = () => ownedByAPhone;
 
   it("is discoverable by the same sweep the app runs", async () => {
     const speaker = parseWhoami(await getJson("/whoami"), SPEAKER_IP!);
@@ -125,6 +144,7 @@ describeHardware("speaker integration", () => {
   });
 
   it("claims an unowned speaker without a PIN", async () => {
+    if (needsClaim()) return;
     const reply = await ask({
       type: "pair",
       deviceId,
@@ -135,6 +155,7 @@ describeHardware("speaker integration", () => {
   });
 
   it("reports itself as claimed once paired", async () => {
+    if (needsClaim()) return;
     const speaker = parseWhoami(await getJson("/whoami"), SPEAKER_IP!);
     expect(speaker!.claimed).toBe(true);
   });
@@ -149,6 +170,7 @@ describeHardware("speaker integration", () => {
   });
 
   it("answers heartbeats from the paired phone", async () => {
+    if (needsClaim()) return;
     const reply = await ask({
       type: "heartbeat",
       deviceId,
@@ -158,6 +180,7 @@ describeHardware("speaker integration", () => {
   });
 
   it("accepts the volume the app sends", async () => {
+    if (needsClaim()) return;
     const reply = await ask({
       type: "set_volume",
       deviceId,
@@ -168,11 +191,13 @@ describeHardware("speaker integration", () => {
   });
 
   it("plays the test announcement", async () => {
+    if (needsClaim()) return;
     await tell({ type: "test_speaker", deviceId, authToken: AUTH_TOKEN });
     await waitForSpeech();
   });
 
   it("announces a real PhonePe Business notification", async () => {
+    if (needsClaim()) return;
     // Exactly what the Android listener hands the pipeline.
     const pipeline = runPaymentPipeline(
       {
@@ -209,6 +234,7 @@ describeHardware("speaker integration", () => {
   });
 
   it("announces a Google Pay payment with paise", async () => {
+    if (needsClaim()) return;
     const pipeline = runPaymentPipeline(
       {
         packageName: "com.google.android.apps.nbu.paisa.user",
@@ -244,7 +270,44 @@ describeHardware("speaker integration", () => {
     await waitForSpeech();
   });
 
+  it("announces a bank SMS credit, the way a savings-account payment arrives", async () => {
+    if (needsClaim()) return;
+    const pipeline = runPaymentPipeline(
+      {
+        packageName: "com.google.android.apps.messaging",
+        postTimeMillis: Date.now(),
+        title: "JK-KOTAKD-S",
+        text: "Received Rs.1.00 from FARHAN AHMAD on 02-10-26. UPI Ref 532112345678 -Kotak Bank",
+        bigText: null,
+        subText: null,
+      },
+      {
+        deviceId,
+        minimumAmountPaise: 0,
+        duplicateTimeoutSeconds: 30,
+        smsPackageName: "com.google.android.apps.messaging",
+        enabledSourcePackages: new Set(["com.google.android.apps.messaging"]),
+      },
+      new DuplicateDetector(30_000),
+      Date.now(),
+    );
+
+    const payment = pipeline.payment as PaymentObject;
+    expect(pipeline.rejectedReason).toBeUndefined();
+    expect(payment.amount).toBe(100);
+
+    const reply = await ask({
+      type: "payment",
+      deviceId,
+      authToken: AUTH_TOKEN,
+      payment,
+    });
+    expect(reply.type).toBe("payment_ack");
+    await waitForSpeech();
+  });
+
   it("releases the speaker again so a phone can claim it", async () => {
+    if (needsClaim()) return;
     const reply = await ask({
       type: "unpair",
       deviceId,

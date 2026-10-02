@@ -9,14 +9,7 @@ import { DuplicateDetector } from "./duplicateDetector";
 import { RawNotificationEvent } from "@native/payment-notification-listener";
 import { generateId } from "@shared/utils/id";
 import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager";
-
-const SOURCE_PACKAGE_MAP: Record<string, boolean> = {
-  "com.phonepe.app": true,
-  "com.phonepe.merchant.android": true,
-  "net.one97.paytm": true,
-  "com.paytm.business": true,
-  "com.google.android.apps.nbu.paisa.user": true,
-};
+import { enabledSourcePackages } from "./sourcePackages";
 
 /**
  * Wires the native notification listener to the parse/validate/dedup
@@ -40,18 +33,11 @@ export function usePaymentPipelineRunner() {
       } = useSettingsStore.getState();
       const { pairedDevice } = useDeviceStore.getState();
 
-      const enabledSourcePackages = new Set(
-        Object.keys(SOURCE_PACKAGE_MAP).filter((pkg) => {
-          if (pkg.startsWith("com.phonepe"))
-            return enabledSources.phonepe_business;
-          if (pkg.includes("paytm")) return enabledSources.paytm_business;
-          if (pkg.includes("nbu.paisa")) return enabledSources.google_pay;
-          return false;
-        }),
-      );
-      if (smsEnabled && smsPackageName) {
-        enabledSourcePackages.add(smsPackageName);
-      }
+      const sourcePackages = enabledSourcePackages({
+        enabledSources,
+        smsEnabled,
+        smsPackageName,
+      });
 
       const result = runPaymentPipeline(
         event,
@@ -59,7 +45,7 @@ export function usePaymentPipelineRunner() {
           deviceId: pairedDevice?.id ?? "unpaired",
           minimumAmountPaise: minimumAmount,
           duplicateTimeoutSeconds,
-          enabledSourcePackages,
+          enabledSourcePackages: sourcePackages,
           treatGooglePayAsPersonal: googlePayMode === "personal",
           smsPackageName: smsEnabled ? smsPackageName : undefined,
         },
@@ -116,6 +102,12 @@ export function usePaymentPipelineRunner() {
           at: new Date().toISOString(),
           packageName: event.packageName,
           reason: result.rejectedReason ?? "unknown",
+          // Kept so an unrecognised bank or app wording can be read off the
+          // Logs screen instead of guessed at.
+          text: [event.title, event.bigText ?? event.text]
+            .filter(Boolean)
+            .join(" — ")
+            .slice(0, 200),
         });
       }
     });

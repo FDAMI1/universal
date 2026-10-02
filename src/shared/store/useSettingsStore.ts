@@ -41,7 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
         google_pay: true,
       },
       googlePayMode: "business",
-      smsEnabled: false,
+      smsEnabled: true,
       smsPackageName: "",
       language: "en-IN",
       volume: 0.8,

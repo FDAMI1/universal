@@ -34,7 +34,12 @@ class PaymentListenerService : NotificationListenerService() {
     // avoids feedback loops and wasted work.
     if (packageName == applicationContext.packageName) return
 
-    if (!PaymentListenerPrefs.isSourcePackageEnabled(applicationContext, packageName)) return
+    val captureAll = PaymentListenerPrefs.isCaptureAll(applicationContext)
+    if (!captureAll &&
+      !PaymentListenerPrefs.isSourcePackageEnabled(applicationContext, packageName)
+    ) {
+      return
+    }
 
     val extras = sbn.notification.extras
     val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()

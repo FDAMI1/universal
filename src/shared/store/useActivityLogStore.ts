@@ -9,6 +9,8 @@ export type ActivityLogEntry =
       at: string;
       packageName: string;
       reason: string;
+      /** What the notification actually said, for diagnosing a missed payment. */
+      text?: string;
     }
   | { id: string; type: "connection"; at: string; message: string }
   | { id: string; type: "error"; at: string; message: string };

@@ -7,6 +7,7 @@ import AppNavigator from "./src/navigation/AppNavigator";
 import { usePaymentPipelineRunner } from "./src/modules/payment-parser/usePaymentPipelineRunner";
 import { usePaymentHistoryStore } from "./src/shared/store/usePaymentHistoryStore";
 import { useEsp32ConnectionManager } from "./src/shared/net/useEsp32ConnectionManager";
+import { useListenerSourceSync } from "./src/modules/notifications/hooks/useListenerSourceSync";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,7 @@ const queryClient = new QueryClient({
 function PaymentPipelineBoundary() {
   usePaymentPipelineRunner();
   useEsp32ConnectionManager();
+  useListenerSourceSync();
 
   useEffect(() => {
     usePaymentHistoryStore.getState().loadFromDb();
