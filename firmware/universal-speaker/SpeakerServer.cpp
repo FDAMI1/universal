@@ -77,7 +77,8 @@ Reply handlePair(JsonObjectConst msg) {
 
   const char* pin = msg["pin"] | "";
   const char* token = msg["authToken"] | "";
-  if (config.pin != pin) {
+  const bool firstClaim = !config.isPaired();
+  if (!firstClaim && config.pin != pin) {
     if (++pinFailures >= MAX_PIN_FAILURES) {
       pinFailures = 0;
       pinLockedUntil = millis() + PIN_LOCKOUT_MS;
@@ -191,6 +192,22 @@ void begin() {
     Reply reply = handleMessage(json);
     request->send(reply.httpStatus, "application/json", reply.body.isEmpty() ? "{}" : reply.body);
   });
+  // Unauthenticated on purpose: it reveals only what a speaker must announce
+  // to be findable, and never the PIN or the paired phone's token.
+  server.on("/whoami", HTTP_GET, [](AsyncWebServerRequest* request) {
+    JsonDocument doc;
+    doc["product"] = "universal-speaker";
+    doc["v"] = PROTOCOL_VERSION;
+    doc["deviceId"] = config.deviceId;
+    doc["deviceName"] = config.deviceName;
+    doc["claimed"] = config.isPaired();
+    doc["pairingOpen"] = isPairingOpen();
+    doc["speaking"] = AudioPlayer::isBusy();
+    String out;
+    serializeJson(doc, out);
+    request->send(200, "application/json", out);
+  });
+
   server.onNotFound([](AsyncWebServerRequest* request) { request->send(404, "text/plain", "Not found"); });
   server.begin();
 }
