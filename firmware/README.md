@@ -59,6 +59,10 @@ are never needed. What follows is the same thing done by hand, e.g. from a lapto
 4. Switch back to the same Wi-Fi. In the app, go to **Speaker → enter manually**, type the three values, and pair.
 5. The speaker says "फ़ोन सफलतापूर्वक जुड़ गया". Use **Test Speaker** on the Dashboard to check.
 
+Once a speaker is on Wi-Fi, the app finds it by itself: **Speaker** tab, tap **Connect**.
+No IP and no PIN are typed, and a paired speaker that gets a new address from the router
+is found again automatically.
+
 A speaker answers only to the phone that paired with it. A second phone is told
 "already connected to another device" until the first releases it (**Speaker → Release
 speaker**, which sends `unpair`) or someone presses BOOT.
@@ -106,4 +110,22 @@ Matches `src/shared/net/protocol.ts`:
 - The app sets the volume with `set_volume` (0-100); the speaker keeps it across reboots.
 - `unpair` makes the speaker forget the paired phone so another can claim it.
 - Setup portal (AP mode only): `GET /scan`, `POST /connect`, `GET /status`, `POST /reset`, `POST /finish`.
+- `GET /whoami` (no auth) is how the app discovers speakers. It reports the Device ID,
+  name, whether a phone has claimed it, whether pairing is open, and whether it's
+  currently speaking. Never the PIN or the paired phone's token.
+- A speaker nobody has claimed pairs without a PIN. One that is already claimed needs
+  the PIN and an open pairing window (press BOOT).
+
+## Testing against real hardware
+
+With a speaker on the same network as the laptop:
+
+```
+SPEAKER_IP=192.168.0.100 npx jest speakerIntegration --runInBand
+```
+
+It runs the app's own notification parsers and wire protocol against the real speaker:
+discovery, claiming, auth rejection, volume, the test announcement, a PhonePe and a
+Google Pay payment, and releasing the speaker. `npm test` skips it when SPEAKER_IP is
+unset.
 - Pairing checks the PIN. All other messages need the auth token the phone sent when it paired.

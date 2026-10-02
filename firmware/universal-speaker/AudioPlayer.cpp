@@ -1,51 +1,80 @@
 #include "AudioPlayer.h"
 #include <Arduino.h>
 #include <string.h>
-#include "driver/dac_continuous.h"
+#include "driver/dac_oneshot.h"
+#include "soc/rtc_io_reg.h"
+#include "soc/sens_reg.h"
 
 namespace AudioPlayer {
 namespace {
 
+// Audio is clocked out by a hardware timer that writes one sample straight to
+// the DAC register, rather than by the dac_continuous DMA driver. On
+// arduino-esp32 3.x that driver's descriptors never free up: every write
+// returns ESP_ERR_TIMEOUT having played nothing (espressif/arduino-esp32
+// #10851). A 16 kHz timer is a few microseconds of work per tick and depends
+// on nothing but the DAC pad itself.
 constexpr uint8_t DAC_MIDPOINT = 128;
-constexpr size_t DMA_DESC_NUM = 4;
-constexpr size_t DMA_BUF_SIZE = 1024;
+constexpr int DAC_PIN = 25;  // DAC channel 1
 constexpr size_t QUEUE_LENGTH = 8;
 constexpr uint32_t GAP_BETWEEN_CLIPS_MS = 40;
+
+// A quarter second of slack between the feeding task and the timer. Big enough
+// that Wi-Fi work never starves playback, small enough to stay in RAM cheaply.
+constexpr size_t RING_SIZE = 4096;
+constexpr size_t RING_MASK = RING_SIZE - 1;
+static_assert((RING_SIZE & RING_MASK) == 0, "ring size must be a power of two");
 
 struct Announcement {
   ClipId clips[MAX_CLIPS_PER_ANNOUNCEMENT];
   uint8_t count;
 };
 
-dac_continuous_handle_t dac = nullptr;
 QueueHandle_t queue = nullptr;
+hw_timer_t* sampleTimer = nullptr;
 volatile bool busy = false;
 uint8_t gain = 100;
-uint8_t chunk[DMA_BUF_SIZE];
 
-void writeChunk(size_t len) {
-  size_t loaded = 0;
-  dac_continuous_write(dac, chunk, len, &loaded, -1);
+// Single producer (the audio task), single consumer (the timer ISR), so plain
+// volatile indices are enough — no lock needed.
+uint8_t ring[RING_SIZE];
+volatile size_t ringHead = 0;  // written by the task
+volatile size_t ringTail = 0;  // written by the ISR
+
+inline size_t ringAvailable() { return (ringHead - ringTail) & RING_MASK; }
+inline size_t ringSpace() { return RING_MASK - ringAvailable(); }
+
+// Writes the DAC's output register directly. dacWrite() takes a lock and
+// touches flash, neither of which is safe from an interrupt.
+inline void IRAM_ATTR writeDac(uint8_t value) {
+  REG_SET_FIELD(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, value);
 }
 
-void writeSilence(size_t samples) {
-  memset(chunk, DAC_MIDPOINT, sizeof(chunk));
-  while (samples > 0) {
-    const size_t n = samples < sizeof(chunk) ? samples : sizeof(chunk);
-    writeChunk(n);
-    samples -= n;
+void IRAM_ATTR onSampleTick() {
+  if (ringHead == ringTail) {
+    writeDac(DAC_MIDPOINT);  // nothing queued: rest at mid-rail, silent
+    return;
   }
+  writeDac(ring[ringTail]);
+  ringTail = (ringTail + 1) & RING_MASK;
+}
+
+/** Blocks until the ring has room, then appends one sample. */
+void pushSample(uint8_t sample) {
+  while (ringSpace() == 0) vTaskDelay(1);
+  ring[ringHead] = sample;
+  ringHead = (ringHead + 1) & RING_MASK;
+}
+
+void playSilence(size_t samples) {
+  for (size_t i = 0; i < samples; ++i) pushSample(DAC_MIDPOINT);
 }
 
 void playClip(ClipId id) {
   const ClipData& clip = CLIP_TABLE[id];
-  for (uint32_t offset = 0; offset < clip.length; offset += sizeof(chunk)) {
-    const size_t n = min<size_t>(sizeof(chunk), clip.length - offset);
-    for (size_t i = 0; i < n; ++i) {
-      const int centred = static_cast<int>(clip.data[offset + i]) - DAC_MIDPOINT;
-      chunk[i] = static_cast<uint8_t>(DAC_MIDPOINT + centred * gain / 100);
-    }
-    writeChunk(n);
+  for (uint32_t i = 0; i < clip.length; ++i) {
+    const int centred = static_cast<int>(clip.data[i]) - DAC_MIDPOINT;
+    pushSample(static_cast<uint8_t>(DAC_MIDPOINT + centred * gain / 100));
   }
 }
 
@@ -56,11 +85,11 @@ void playerTask(void*) {
     busy = true;
     for (uint8_t i = 0; i < a.count; ++i) {
       playClip(a.clips[i]);
-      writeSilence(CLIP_SAMPLE_RATE * GAP_BETWEEN_CLIPS_MS / 1000);
+      playSilence(CLIP_SAMPLE_RATE * GAP_BETWEEN_CLIPS_MS / 1000);
     }
-    // In synchronous mode the DMA keeps cycling its descriptors after the last
-    // write, so fill every one of them with silence to stop a trailing buzz.
-    writeSilence(DMA_DESC_NUM * DMA_BUF_SIZE);
+    // The queue is only empty once the timer has drained what we queued, so
+    // isBusy() stays true until the speaker has actually stopped talking.
+    while (ringAvailable() > 0) vTaskDelay(1);
     busy = uxQueueMessagesWaiting(queue) > 0;
   }
 }
@@ -70,28 +99,23 @@ void playerTask(void*) {
 bool begin(uint8_t gainPercent) {
   gain = gainPercent > 100 ? 100 : gainPercent;
 
-  dac_continuous_config_t config = {
-      .chan_mask = DAC_CHANNEL_MASK_CH0,  // GPIO25
-      .desc_num = DMA_DESC_NUM,
-      .buf_size = DMA_BUF_SIZE,
-      .freq_hz = CLIP_SAMPLE_RATE,
-      .offset = 0,
-      // PLL_D2 can't divide down to 16 kHz (its floor is ~19.6 kHz); APLL can.
-      .clk_src = DAC_DIGI_CLK_SRC_APLL,
-      .chan_mode = DAC_CHANNEL_MODE_SIMUL,
-  };
-  if (dac_continuous_new_channels(&config, &dac) != ESP_OK) return false;
-  if (dac_continuous_enable(dac) != ESP_OK) return false;
+  // Configures and powers up the DAC pad. After this the ISR drives the output
+  // register itself.
+  dac_oneshot_handle_t pad = nullptr;
+  dac_oneshot_config_t padConfig = {.chan_id = DAC_CHAN_0};
+  if (dac_oneshot_new_channel(&padConfig, &pad) != ESP_OK) return false;
+  dac_oneshot_output_voltage(pad, DAC_MIDPOINT);
 
   queue = xQueueCreate(QUEUE_LENGTH, sizeof(Announcement));
   if (!queue) return false;
 
-  // Ease the output from 0 V up to mid-rail over ~50 ms so boot doesn't pop.
-  constexpr size_t rampLen = CLIP_SAMPLE_RATE / 20;
-  static_assert(rampLen <= DMA_BUF_SIZE, "ramp must fit in one chunk");
-  for (size_t i = 0; i < rampLen; ++i) chunk[i] = i * DAC_MIDPOINT / rampLen;
-  writeChunk(rampLen);
-  writeSilence(DMA_DESC_NUM * DMA_BUF_SIZE);
+  // 80 MHz / 5000 gives exactly the clips' 16 kHz, so playback is never
+  // slightly fast or slow.
+  sampleTimer = timerBegin(CLIP_SAMPLE_RATE);
+  if (!sampleTimer) return false;
+  timerAttachInterrupt(sampleTimer, &onSampleTick);
+  timerAlarm(sampleTimer, 1, true, 0);
+
   return xTaskCreatePinnedToCore(playerTask, "audio", 4096, nullptr, 3, nullptr, 1) == pdPASS;
 }
 
