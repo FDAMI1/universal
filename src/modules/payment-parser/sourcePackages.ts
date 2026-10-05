@@ -9,6 +9,8 @@ import { ToggleableSource } from "@shared/store/useSettingsStore";
 export const SOURCE_PACKAGES: Record<ToggleableSource, string[]> = {
   phonepe_business: [
     "com.phonepe.app",
+    // What PhonePe Business actually installs as, confirmed on a real phone.
+    "com.phonepe.app.business",
     "com.phonepe.merchant.android",
     "com.phonepe.business",
   ],
@@ -16,6 +18,7 @@ export const SOURCE_PACKAGES: Record<ToggleableSource, string[]> = {
     "net.one97.paytm",
     "com.paytm.business",
     "net.one97.paytm.merchant",
+    "net.one97.paytm.business",
   ],
   google_pay: [
     "com.google.android.apps.nbu.paisa.user",
