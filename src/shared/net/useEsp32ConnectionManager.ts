@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { Platform } from "react-native";
 import { useDeviceStore } from "@shared/store/useDeviceStore";
 import { useSettingsStore } from "@shared/store/useSettingsStore";
 import { useActivityLogStore } from "@shared/store/useActivityLogStore";
@@ -6,6 +7,7 @@ import { Esp32Connection } from "./Esp32Connection";
 import { DEFAULT_ESP32_PORT } from "./protocol";
 import { generateId } from "@shared/utils/id";
 import { findSpeakerById } from "@modules/pairing/api/discovery";
+import { PaymentNotificationListener } from "@native/payment-notification-listener";
 
 let activeConnection: Esp32Connection | null = null;
 
@@ -51,6 +53,17 @@ export function useEsp32ConnectionManager() {
   );
   const connectionRef = useRef<Esp32Connection | null>(null);
   const lastRelocateAt = useRef(0);
+
+  // The native side announces when Android has killed the app's JS, so it
+  // needs its own copy of where the speaker is and how to authenticate.
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    PaymentNotificationListener.setSpeakerTarget(
+      pairedDevice?.ipAddress ?? "",
+      pairedDevice?.id ?? "",
+      pairedDevice?.authToken ?? "",
+    );
+  }, [pairedDevice]);
 
   useEffect(() => {
     if (!pairedDevice) {

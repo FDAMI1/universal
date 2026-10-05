@@ -46,11 +46,20 @@ class PaymentBridgeService : Service() {
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     val event = intent?.let { pendingEvents.poll() }
     if (event != null) {
-      PaymentBridgeEmitter.emit(event)
+      if (PaymentBridgeEmitter.hasListener()) {
+        PaymentBridgeEmitter.emit(event)
+      } else {
+        // Android restarts this process for the listener alone, with no React
+        // context. Announce from here rather than let the payment pass in
+        // silence; JS replays the queue later for history, which is why the
+        // event is marked as already announced.
+        val announced = SpeakerAnnouncer.announce(applicationContext, event)
+        PaymentBridgeEmitter.emit(event.copy(announcedNatively = announced))
+      }
     }
-    // If the OS kills this process, don't auto-restart with a stale intent —
-    // the next real notification will start it again via enqueue().
-    return START_NOT_STICKY
+    // Keep the service up: it is what keeps payments arriving while the phone
+    // sits idle, and Android restarting it is cheaper than a missed sale.
+    return START_STICKY
   }
 
   override fun onDestroy() {

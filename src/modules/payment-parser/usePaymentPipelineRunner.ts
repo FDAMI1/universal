@@ -69,6 +69,13 @@ export function usePaymentPipelineRunner() {
               payment,
             });
 
+            // Already said aloud by the native fallback while the app was
+            // not running: keep the record, don't announce it twice.
+            if (event.announcedNatively) {
+              usePaymentHistoryStore.getState().markAnnounced(entry.id);
+              return;
+            }
+
             const connection = getActiveEsp32Connection();
             if (!pairedDevice || !connection) return;
             connection

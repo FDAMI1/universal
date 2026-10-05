@@ -92,3 +92,40 @@ describe("DuplicateDetector", () => {
     expect(detector.isDuplicate(makePayment(), 5_000)).toBe(false);
   });
 });
+
+// A shop takes two ₹5 sales a few seconds apart: both must be announced.
+// A single sale reported by the app and again by the bank must not be.
+describe("two customers paying the same amount", () => {
+  const at = (payer: string | null, transactionId: string | null = null) =>
+    makePayment({ amount: 500, payer, transactionId });
+
+  it("announces both when the payers differ", () => {
+    const detector = new DuplicateDetector(30_000);
+    detector.isDuplicate(at("RAHUL SHARMA"), 1_000);
+    expect(detector.isDuplicate(at("PRIYA VERMA"), 6_000)).toBe(false);
+  });
+
+  it("suppresses the same payer reported twice", () => {
+    const detector = new DuplicateDetector(30_000);
+    detector.isDuplicate(at("RAHUL SHARMA"), 1_000);
+    expect(detector.isDuplicate(at("rahul  sharma"), 4_000)).toBe(true);
+  });
+
+  it("treats a truncated name as the same payer", () => {
+    const detector = new DuplicateDetector(30_000);
+    detector.isDuplicate(at("MOHAMMED ABDULLAH SHARIF A"), 1_000);
+    expect(detector.isDuplicate(at("MOHAMMED ABDULLAH"), 3_000)).toBe(true);
+  });
+
+  it("falls back to amount alone when no payer is known", () => {
+    const detector = new DuplicateDetector(30_000);
+    detector.isDuplicate(at(null), 1_000);
+    expect(detector.isDuplicate(at(null), 4_000)).toBe(true);
+  });
+
+  it("lets a repeat through once the window has passed", () => {
+    const detector = new DuplicateDetector(30_000);
+    detector.isDuplicate(at("RAHUL SHARMA"), 1_000);
+    expect(detector.isDuplicate(at("RAHUL SHARMA"), 40_000)).toBe(false);
+  });
+});

@@ -1,6 +1,8 @@
 import { NativeModule, requireNativeModule } from "expo";
 
 export interface RawNotificationEvent {
+  /** The native fallback already announced this one while JS was not running. */
+  announcedNatively?: boolean;
   packageName: string;
   postTimeMillis: number;
   title: string | null;
@@ -24,6 +26,8 @@ declare class PaymentNotificationListenerModule extends NativeModule<PaymentNoti
   requestListenerRebind(): void;
   /** The phone's messaging app, which is what shows bank SMS. Null if unknown. */
   getDefaultSmsPackage(): string | null;
+  /** Where the fallback announcer should send payments; empty strings clear it. */
+  setSpeakerTarget(ip: string, deviceId: string, token: string): void;
   /** Troubleshooting: forward notifications from every app, not just payment ones. */
   setCaptureAllNotifications(enabled: boolean): void;
   isCaptureAllNotifications(): boolean;

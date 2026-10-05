@@ -9,4 +9,7 @@ data class RawNotificationEvent(
   val text: String?,
   val bigText: String?,
   val subText: String?,
+  /** True when the native fallback already announced this, because JS was
+   *  not running at the time. JS then records it without announcing again. */
+  val announcedNatively: Boolean = false,
 )

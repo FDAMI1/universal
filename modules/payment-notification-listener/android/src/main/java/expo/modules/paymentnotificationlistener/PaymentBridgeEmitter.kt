@@ -31,6 +31,9 @@ object PaymentBridgeEmitter {
   }
 
   @Synchronized
+  fun hasListener(): Boolean = listener != null
+
+  @Synchronized
   fun emit(event: RawNotificationEvent) {
     val current = listener
     if (current != null) {

@@ -2,18 +2,38 @@ import { ParsedPayment } from "./types";
 
 interface RecentPaymentRecord {
   amount: number;
-  source: string;
+  payer: string | null;
   transactionId: string | null;
   seenAtMillis: number;
 }
 
+/** Upper case, single spaces: "Mohammed  Abdullah" and "MOHAMMED ABDULLAH"
+ * are the same customer written by two different apps. */
+function normalizePayer(payer: string | null): string | null {
+  if (!payer) return null;
+  const cleaned = payer.trim().replace(/\s+/g, " ").toUpperCase();
+  return cleaned.length > 0 ? cleaned : null;
+}
+
+/** One app often truncates the name the other spells out, so a prefix counts
+ * as the same person: "MOHAMMED ABDULLAH" vs "MOHAMMED ABDULLAH SHARIF A". */
+function samePayer(a: string, b: string): boolean {
+  return a === b || a.startsWith(b) || b.startsWith(a);
+}
+
 /**
- * Module 4 (Duplicate Detection): the same payment can trigger more than one
- * notification (e.g. a banner + a status-bar update), so this suppresses
- * repeats within a configurable window rather than announcing each one.
+ * Suppresses repeats of one payment without silencing a second genuine sale.
  *
- * Kept as a small class instead of module-level state so it can be
- * instantiated fresh in tests without leaking state between them.
+ * A single payment is announced by several things at once: PhonePe posts the
+ * same notification two to four times, and the bank's SMS reports it again. So
+ * repeats must be swallowed. But in a shop two customers paying the same
+ * amount moments apart is ordinary, and losing the second sale is far worse
+ * than announcing one twice — so identity is decided on the strongest signal
+ * each pair of payments shares:
+ *
+ *   both carry a transaction ID -> the IDs must match
+ *   both name the payer         -> amount and payer must match
+ *   neither                     -> amount alone, inside the window
  */
 export class DuplicateDetector {
   private recent: RecentPaymentRecord[] = [];
@@ -28,23 +48,22 @@ export class DuplicateDetector {
    *  and records this payment as seen either way. */
   isDuplicate(payment: ParsedPayment, nowMillis: number): boolean {
     this.evictExpired(nowMillis);
+    const payer = normalizePayer(payment.payer);
 
     const isMatch = this.recent.some((record) => {
       if (record.amount !== payment.amount) return false;
-      // Two IDs that differ mean two genuinely separate payments of the same
-      // amount; one missing ID means amount within the window is all we have.
       if (payment.transactionId && record.transactionId) {
         return payment.transactionId === record.transactionId;
       }
-      // Deliberately NOT matched on source: one sale is commonly reported
-      // twice, by the payment app and again by the bank's SMS, and the shop
-      // should hear it once.
+      if (payer && record.payer) {
+        return samePayer(payer, record.payer);
+      }
       return true;
     });
 
     this.recent.push({
       amount: payment.amount,
-      source: payment.source,
+      payer,
       transactionId: payment.transactionId,
       seenAtMillis: nowMillis,
     });

@@ -28,6 +28,7 @@ class PaymentNotificationListenerModule : Module() {
             "text" to event.text,
             "bigText" to event.bigText,
             "subText" to event.subText,
+            "announcedNatively" to event.announcedNatively,
           ),
         )
       }
@@ -138,6 +139,19 @@ class PaymentNotificationListenerModule : Module() {
     Function("isCaptureAllNotifications") {
       val ctx = appContext.reactContext ?: return@Function false
       PaymentListenerPrefs.isCaptureAll(ctx)
+    }
+
+    // Lets the fallback announcer reach the speaker on its own. Called from
+    // JS whenever pairing changes, since only JS knows the paired device.
+    Function("setSpeakerTarget") { ip: String, deviceId: String, token: String ->
+      val ctx = appContext.reactContext
+      if (ctx != null) {
+        if (ip.isEmpty() || deviceId.isEmpty() || token.isEmpty()) {
+          SpeakerAnnouncer.clearTarget(ctx)
+        } else {
+          SpeakerAnnouncer.saveTarget(ctx, ip, deviceId, token)
+        }
+      }
     }
 
     // Android puts unused apps to sleep, which stops payment announcements
