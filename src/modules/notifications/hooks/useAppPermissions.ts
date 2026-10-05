@@ -21,8 +21,8 @@ export interface PermissionItem {
   key: PermissionKey;
   title: string;
   why: string;
-  /** What the user has to do once the system screen opens. */
-  instruction: string;
+  /** The exact taps, in order, for people who'd rather follow a list. */
+  steps: string[];
   granted: boolean;
   /** Android can't report OEM autostart state, so it's never shown as granted. */
   verifiable: boolean;
@@ -56,7 +56,11 @@ export function useAppPermissions() {
         key: "postNotifications",
         title: "Show notifications",
         why: "Lets the app show that it's watching for payments, which is what keeps it running in the background.",
-        instruction: "Tap Allow.",
+        steps: [
+          "Tap the button above.",
+          'Android asks "Allow Universal Speaker to send you notifications?"',
+          "Tap Allow.",
+        ],
         granted: await readPostNotifications(),
         verifiable: true,
         required: true,
@@ -65,8 +69,13 @@ export function useAppPermissions() {
         key: "notificationAccess",
         title: "Read payment notifications",
         why: "This is how payments are detected. The app reads notifications from PhonePe, Paytm and Google Pay only.",
-        instruction:
-          "Find Universal Speaker in the list, turn it on, and confirm.",
+        steps: [
+          "Tap the button above. The phone's Notification access list opens.",
+          "Scroll to Universal Speaker and tap it (or its switch).",
+          "Turn the switch ON.",
+          'A warning appears about reading all notifications. Tap Allow.',
+          "Press Back to return here. The tick turns green.",
+        ],
         granted: PaymentNotificationListener.isNotificationAccessGranted(),
         verifiable: true,
         required: true,
@@ -75,7 +84,12 @@ export function useAppPermissions() {
         key: "batteryOptimization",
         title: "Run without being slept",
         why: "Android pauses apps it thinks are unused. Without this, announcements stop while the phone is idle.",
-        instruction: "Choose Allow, or set the app to Unrestricted.",
+        steps: [
+          "Tap the button above.",
+          'If a dialog appears, tap Allow. Done.',
+          "If a list of apps opens instead: tap the menu at the top and choose All apps, find Universal Speaker, and set it to No restrictions (Xiaomi and Oppo), Unrestricted (stock Android) or Don't optimise.",
+          "Press Back to return here.",
+        ],
         granted: PaymentNotificationListener.isBatteryOptimizationIgnored(),
         verifiable: true,
         required: true,
@@ -87,7 +101,13 @@ export function useAppPermissions() {
         key: "autoStart",
         title: "Autostart",
         why: "Your phone's brand closes background apps on its own. Autostart keeps the app alive after a restart.",
-        instruction: "Find Universal Speaker and switch Autostart on.",
+        steps: [
+          "Tap the button above. Your phone's Autostart list opens.",
+          "Find Universal Speaker in the list.",
+          "Turn its switch ON (it may already be on).",
+          "Press Back to return here.",
+          "This row stays orange whatever you do — Android gives apps no way to read this setting back. If the switch is on, you are done.",
+        ],
         granted: false,
         verifiable: false,
         required: false,
