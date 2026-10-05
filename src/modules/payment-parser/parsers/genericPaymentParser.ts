@@ -1,6 +1,9 @@
 import { RawNotificationEvent } from "@native/payment-notification-listener";
 import { ParsedPayment } from "../types";
-import { extractAmountPaise } from "../amountUtils";
+import {
+  extractAmountPaise,
+  normalizeNotificationText,
+} from "../amountUtils";
 
 /**
  * Announces money arriving in *any* app, by reading the notification's words
@@ -50,9 +53,11 @@ export function parseGenericIncomingPayment(
 ): ParsedPayment | null {
   if (IGNORED_PACKAGES.includes(event.packageName)) return null;
 
-  const text = [event.title, event.bigText ?? event.text, event.subText]
-    .filter(Boolean)
-    .join(" ");
+  const text = normalizeNotificationText(
+    [event.title, event.bigText ?? event.text, event.subText]
+      .filter(Boolean)
+      .join(" "),
+  );
   if (!text) return null;
 
   if (OUTGOING.test(text)) return null;

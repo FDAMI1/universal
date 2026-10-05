@@ -1,6 +1,9 @@
 import { RawNotificationEvent } from "@native/payment-notification-listener";
 import { NotificationParser, ParsedPayment } from "../types";
-import { extractAmountPaise } from "../amountUtils";
+import {
+  extractAmountPaise,
+  normalizeNotificationText,
+} from "../amountUtils";
 
 /**
  * Bank credit alerts, which on most phones arrive as an SMS shown by the
@@ -25,9 +28,11 @@ const REFERENCE =
 export function parseBankSmsNotification(
   event: RawNotificationEvent,
 ): ParsedPayment | null {
-  const text = [event.title, event.bigText ?? event.text, event.subText]
-    .filter(Boolean)
-    .join(" ");
+  const text = normalizeNotificationText(
+    [event.title, event.bigText ?? event.text, event.subText]
+      .filter(Boolean)
+      .join(" "),
+  );
   if (!text) return null;
 
   if (OUTGOING.test(text)) return null;
