@@ -44,8 +44,13 @@ class PaymentBridgeService : Service() {
   }
 
   override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-    val event = intent?.let { pendingEvents.poll() }
-    if (event != null) {
+    // Drain everything queued, not one per intent: Android coalesces repeated
+    // startService calls while the service is already running, so one event
+    // per intent left the queue permanently behind — each payment delivered
+    // the previous one, which was usually suppressed as a duplicate, and the
+    // speaker fell silent after the first announcement.
+    while (true) {
+      val event = pendingEvents.poll() ?: break
       if (PaymentBridgeEmitter.hasListener()) {
         PaymentBridgeEmitter.emit(event)
       } else {
