@@ -51,7 +51,7 @@ class PaymentBridgeService : Service() {
     // speaker fell silent after the first announcement.
     while (true) {
       val event = pendingEvents.poll() ?: break
-      if (PaymentBridgeEmitter.hasListener()) {
+      if (PaymentBridgeEmitter.hasLiveListener()) {
         PaymentBridgeEmitter.emit(event)
       } else {
         // Android restarts this process for the listener alone, with no React

@@ -143,6 +143,13 @@ class PaymentNotificationListenerModule : Module() {
 
     // Lets the fallback announcer reach the speaker on its own. Called from
     // JS whenever pairing changes, since only JS knows the paired device.
+    // JS calls this on a timer while it is running. Android freezes the JS
+    // thread when the phone is locked, and the beat stopping is what tells the
+    // native side to announce payments itself.
+    Function("jsHeartbeat") {
+      PaymentBridgeEmitter.heartbeat()
+    }
+
     Function("setSpeakerTarget") { ip: String, deviceId: String, token: String ->
       val ctx = appContext.reactContext
       if (ctx != null) {

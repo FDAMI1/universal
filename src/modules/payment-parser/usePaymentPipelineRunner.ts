@@ -6,7 +6,10 @@ import { useActivityLogStore } from "@shared/store/useActivityLogStore";
 import { usePaymentHistoryStore } from "@shared/store/usePaymentHistoryStore";
 import { runPaymentPipeline } from "./paymentPipeline";
 import { DuplicateDetector } from "./duplicateDetector";
-import { RawNotificationEvent } from "@native/payment-notification-listener";
+import {
+  PaymentNotificationListener,
+  RawNotificationEvent,
+} from "@native/payment-notification-listener";
 import { generateId } from "@shared/utils/id";
 import { getActiveEsp32Connection } from "@shared/net/useEsp32ConnectionManager";
 import { enabledSourcePackages } from "./sourcePackages";
@@ -17,9 +20,21 @@ import { enabledSourcePackages } from "./sourcePackages";
  * the app root so payments are captured regardless of which screen is
  * active.
  */
+/** Native announces payments itself when this stops arriving. */
+const HEARTBEAT_INTERVAL_MS = 10_000;
+
 export function usePaymentPipelineRunner() {
   const { subscribeToPayments } = usePaymentNotificationListener();
   const detectorRef = useRef(new DuplicateDetector(30_000));
+
+  useEffect(() => {
+    PaymentNotificationListener.jsHeartbeat();
+    const timer = setInterval(
+      () => PaymentNotificationListener.jsHeartbeat(),
+      HEARTBEAT_INTERVAL_MS,
+    );
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeToPayments((event: RawNotificationEvent) => {

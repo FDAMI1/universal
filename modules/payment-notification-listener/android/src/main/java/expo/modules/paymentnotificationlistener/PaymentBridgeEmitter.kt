@@ -18,20 +18,35 @@ object PaymentBridgeEmitter {
   /** A shop's busiest minute, not a day's history: anything older is stale. */
   private const val MAX_PENDING = 20
 
+  /** How stale a heartbeat may get before JS counts as frozen. It beats
+   *  every 10s, so this tolerates a missed beat without declaring it dead. */
+  private const val HEARTBEAT_TIMEOUT_MS = 25_000L
+
   private var listener: ((RawNotificationEvent) -> Unit)? = null
   private val pending = ArrayDeque<RawNotificationEvent>()
+  private var lastHeartbeatAt = 0L
 
   @Synchronized
   fun setListener(listener: ((RawNotificationEvent) -> Unit)?) {
     this.listener = listener
+    if (listener != null) lastHeartbeatAt = System.currentTimeMillis()
     if (listener == null) return
     while (pending.isNotEmpty()) {
       listener(pending.removeFirst())
     }
   }
 
+  /** Called from JS on a timer. A frozen JS thread stops calling it, which
+   *  is the only reliable sign that it cannot handle a payment right now. */
   @Synchronized
-  fun hasListener(): Boolean = listener != null
+  fun heartbeat() {
+    lastHeartbeatAt = System.currentTimeMillis()
+  }
+
+  /** True only when JS is registered *and* still ticking. */
+  @Synchronized
+  fun hasLiveListener(): Boolean =
+    listener != null && System.currentTimeMillis() - lastHeartbeatAt < HEARTBEAT_TIMEOUT_MS
 
   @Synchronized
   fun emit(event: RawNotificationEvent) {
