@@ -15,6 +15,9 @@ interface SettingsState {
   enabledSources: Record<ToggleableSource, boolean>;
   googlePayMode: GooglePayMode;
   anyAppEnabled: boolean;
+  /** Troubleshooting only: capture every notification and record the ones
+   * that were ignored, so a missed payment can be diagnosed. */
+  verboseLogging: boolean;
   smsEnabled: boolean;
   smsPackageName: string;
   language: string;
@@ -25,6 +28,7 @@ interface SettingsState {
   setSourceEnabled: (source: ToggleableSource, enabled: boolean) => void;
   setGooglePayMode: (mode: GooglePayMode) => void;
   setAnyAppEnabled: (enabled: boolean) => void;
+  setVerboseLogging: (enabled: boolean) => void;
   setSmsEnabled: (enabled: boolean) => void;
   setSmsPackageName: (packageName: string) => void;
   setLanguage: (language: string) => void;
@@ -44,6 +48,7 @@ export const useSettingsStore = create<SettingsState>()(
       },
       googlePayMode: "business",
       anyAppEnabled: true,
+      verboseLogging: false,
       smsEnabled: true,
       smsPackageName: "",
       language: "en-IN",
@@ -57,6 +62,7 @@ export const useSettingsStore = create<SettingsState>()(
         })),
       setGooglePayMode: (mode) => set({ googlePayMode: mode }),
       setAnyAppEnabled: (enabled) => set({ anyAppEnabled: enabled }),
+      setVerboseLogging: (enabled) => set({ verboseLogging: enabled }),
       setSmsEnabled: (enabled) => set({ smsEnabled: enabled }),
       setSmsPackageName: (packageName) => set({ smsPackageName: packageName }),
       setLanguage: (language) => set({ language }),

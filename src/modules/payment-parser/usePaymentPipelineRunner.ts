@@ -27,6 +27,7 @@ export function usePaymentPipelineRunner() {
         enabledSources,
         googlePayMode,
         anyAppEnabled,
+        verboseLogging,
         smsEnabled,
         smsPackageName,
         minimumAmount,
@@ -97,7 +98,7 @@ export function usePaymentPipelineRunner() {
               message: `failed to persist payment: ${String(error)}`,
             });
           });
-      } else {
+      } else if (verboseLogging) {
         useActivityLogStore.getState().addEntry({
           id: generateId(),
           type: "rejected",

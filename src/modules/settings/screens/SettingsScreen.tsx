@@ -286,13 +286,8 @@ function AnnouncementSettingsSection() {
 }
 
 function TroubleshootingSection() {
-  const [captureAll, setCaptureAll] = useState(() => {
-    try {
-      return PaymentNotificationListener.isCaptureAllNotifications();
-    } catch {
-      return false;
-    }
-  });
+  const verboseLogging = useSettingsStore((s) => s.verboseLogging);
+  const setVerboseLogging = useSettingsStore((s) => s.setVerboseLogging);
 
   return (
     <View style={styles.section}>
@@ -301,19 +296,16 @@ function TroubleshootingSection() {
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Capture every notification</Text>
           <Switch
-            value={captureAll}
-            onValueChange={(next) => {
-              PaymentNotificationListener.setCaptureAllNotifications(next);
-              setCaptureAll(next);
-            }}
+            value={verboseLogging}
+            onValueChange={setVerboseLogging}
             trackColor={{ true: colors.primary[500], false: colors.slate[200] }}
           />
         </View>
         <Text style={styles.helperText}>
           Turn this on if a payment wasn't announced, then receive one again.
-          Every notification your phone shows will be listed on the Logs screen
-          with its exact wording, which shows why it was missed. Turn it off
-          afterwards — it's noisy.
+          Every notification your phone shows is then listed on the Logs screen
+          with its exact wording, which shows why it was missed. With it off,
+          the Logs screen shows only real payments.
         </Text>
       </View>
     </View>

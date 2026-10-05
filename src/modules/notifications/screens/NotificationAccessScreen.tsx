@@ -19,7 +19,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react-native";
-import { PaymentNotificationListener } from "@native/payment-notification-listener";
+import { useSettingsStore } from "@shared/store/useSettingsStore";
 import ScreenHeader from "@shared/components/ScreenHeader";
 import StatusBadge from "@shared/components/StatusBadge";
 import {
@@ -111,13 +111,8 @@ function PermissionRow({
 
 /** Both ways of finding out why a payment was not announced, written out. */
 function TroubleshootingCard() {
-  const [captureAll, setCaptureAll] = useState(() => {
-    try {
-      return PaymentNotificationListener.isCaptureAllNotifications();
-    } catch {
-      return false;
-    }
-  });
+  const verboseLogging = useSettingsStore((s) => s.verboseLogging);
+  const setVerboseLogging = useSettingsStore((s) => s.setVerboseLogging);
 
   return (
     <View style={styles.card}>
@@ -143,11 +138,8 @@ function TroubleshootingCard() {
       <View style={styles.captureRow}>
         <Text style={styles.rowTitle}>Capture every notification</Text>
         <Switch
-          value={captureAll}
-          onValueChange={(next) => {
-            PaymentNotificationListener.setCaptureAllNotifications(next);
-            setCaptureAll(next);
-          }}
+          value={verboseLogging}
+          onValueChange={setVerboseLogging}
           trackColor={{ true: colors.primary[500], false: colors.slate[200] }}
         />
       </View>

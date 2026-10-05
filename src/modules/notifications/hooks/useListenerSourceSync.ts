@@ -17,6 +17,7 @@ import { enabledSourcePackages } from "@modules/payment-parser/sourcePackages";
 export function useListenerSourceSync() {
   const enabledSources = useSettingsStore((state) => state.enabledSources);
   const anyAppEnabled = useSettingsStore((state) => state.anyAppEnabled);
+  const verboseLogging = useSettingsStore((state) => state.verboseLogging);
   const smsEnabled = useSettingsStore((state) => state.smsEnabled);
   const smsPackageName = useSettingsStore((state) => state.smsPackageName);
   const setSmsPackageName = useSettingsStore((state) => state.setSmsPackageName);
@@ -39,6 +40,14 @@ export function useListenerSourceSync() {
     PaymentNotificationListener.setEnabledSourcePackages([...packages]);
     // The native listener drops anything not in that list before JS runs, so
     // "any payment app" has to switch the filter off at that level too.
-    PaymentNotificationListener.setCaptureAllNotifications(anyAppEnabled);
-  }, [enabledSources, smsEnabled, smsPackageName, anyAppEnabled]);
+    PaymentNotificationListener.setCaptureAllNotifications(
+      anyAppEnabled || verboseLogging,
+    );
+  }, [
+    enabledSources,
+    smsEnabled,
+    smsPackageName,
+    anyAppEnabled,
+    verboseLogging,
+  ]);
 }
