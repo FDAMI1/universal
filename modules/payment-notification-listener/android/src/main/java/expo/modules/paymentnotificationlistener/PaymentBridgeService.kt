@@ -58,8 +58,13 @@ class PaymentBridgeService : Service() {
         // context. Announce from here rather than let the payment pass in
         // silence; JS replays the queue later for history, which is why the
         // event is marked as already announced.
-        val announced = SpeakerAnnouncer.announce(applicationContext, event)
-        PaymentBridgeEmitter.emit(event.copy(announcedNatively = announced))
+        //
+        // On a worker thread because this callback runs on the main one, where
+        // Android forbids network calls outright.
+        Thread {
+          val announced = SpeakerAnnouncer.announce(applicationContext, event)
+          PaymentBridgeEmitter.emit(event.copy(announcedNatively = announced))
+        }.start()
       }
     }
     // Keep the service up: it is what keeps payments arriving while the phone
