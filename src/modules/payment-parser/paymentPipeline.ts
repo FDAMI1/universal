@@ -11,6 +11,9 @@ export interface PaymentPipelineOptions {
   treatGooglePayAsPersonal?: boolean;
   smsPackageName?: string;
   enabledSourcePackages: Set<string>;
+  /** Announce money arriving in any app, judged by the notification's wording
+   * rather than by which app posted it. */
+  allowAnyApp?: boolean;
 }
 
 export interface PipelineResult {
@@ -30,13 +33,17 @@ export function runPaymentPipeline(
   duplicateDetector: DuplicateDetector,
   nowMillis: number,
 ): PipelineResult {
-  if (!options.enabledSourcePackages.has(event.packageName)) {
+  if (
+    !options.allowAnyApp &&
+    !options.enabledSourcePackages.has(event.packageName)
+  ) {
     return { payment: null, rejectedReason: "source not enabled" };
   }
 
   const parsed = parseNotification(event, {
     treatGooglePayAsPersonal: options.treatGooglePayAsPersonal,
     smsPackageName: options.smsPackageName,
+    allowAnyApp: options.allowAnyApp,
   });
   if (!parsed) {
     return {

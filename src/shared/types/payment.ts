@@ -3,7 +3,8 @@ export type PaymentSource =
   | "paytm_business"
   | "google_pay"
   | "google_pay_personal"
-  | "bank_sms";
+  | "bank_sms"
+  | "other_app";
 
 export type PaymentStatus = "success" | "failed" | "pending";
 

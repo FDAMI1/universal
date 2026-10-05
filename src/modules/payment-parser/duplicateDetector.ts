@@ -30,13 +30,15 @@ export class DuplicateDetector {
     this.evictExpired(nowMillis);
 
     const isMatch = this.recent.some((record) => {
-      if (record.source !== payment.source) return false;
       if (record.amount !== payment.amount) return false;
-      // A shared transaction ID is a strong signal on its own; if either
-      // side lacks one, fall back to amount + source + time window only.
+      // Two IDs that differ mean two genuinely separate payments of the same
+      // amount; one missing ID means amount within the window is all we have.
       if (payment.transactionId && record.transactionId) {
         return payment.transactionId === record.transactionId;
       }
+      // Deliberately NOT matched on source: one sale is commonly reported
+      // twice, by the payment app and again by the bank's SMS, and the shop
+      // should hear it once.
       return true;
     });
 

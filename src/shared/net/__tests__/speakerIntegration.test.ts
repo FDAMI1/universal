@@ -306,6 +306,42 @@ describeHardware("speaker integration", () => {
     await waitForSpeech();
   });
 
+  it("announces a Google Pay for Business sale from an unknown package", async () => {
+    if (needsClaim()) return;
+    const pipeline = runPaymentPipeline(
+      {
+        packageName: "com.google.android.apps.nbu.paisa.merchant",
+        postTimeMillis: Date.now(),
+        title: "Payment received",
+        text: "You received ₹1 from MOHAMMED ABDULLAH. UPI txn ID 627848040025",
+        bigText: null,
+        subText: null,
+      },
+      {
+        deviceId,
+        minimumAmountPaise: 0,
+        duplicateTimeoutSeconds: 30,
+        enabledSourcePackages: new Set<string>(),
+        allowAnyApp: true,
+      },
+      new DuplicateDetector(30_000),
+      Date.now(),
+    );
+
+    const payment = pipeline.payment as PaymentObject;
+    expect(pipeline.rejectedReason).toBeUndefined();
+    expect(payment.amount).toBe(100);
+
+    const reply = await ask({
+      type: "payment",
+      deviceId,
+      authToken: AUTH_TOKEN,
+      payment,
+    });
+    expect(reply.type).toBe("payment_ack");
+    await waitForSpeech();
+  });
+
   it("releases the speaker again so a phone can claim it", async () => {
     if (needsClaim()) return;
     const reply = await ask({

@@ -26,6 +26,7 @@ export function usePaymentPipelineRunner() {
       const {
         enabledSources,
         googlePayMode,
+        anyAppEnabled,
         smsEnabled,
         smsPackageName,
         minimumAmount,
@@ -46,6 +47,7 @@ export function usePaymentPipelineRunner() {
           minimumAmountPaise: minimumAmount,
           duplicateTimeoutSeconds,
           enabledSourcePackages: sourcePackages,
+          allowAnyApp: anyAppEnabled,
           treatGooglePayAsPersonal: googlePayMode === "personal",
           smsPackageName: smsEnabled ? smsPackageName : undefined,
         },

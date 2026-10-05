@@ -7,9 +7,21 @@ import { ToggleableSource } from "@shared/store/useSettingsStore";
  * vanish silently.
  */
 export const SOURCE_PACKAGES: Record<ToggleableSource, string[]> = {
-  phonepe_business: ["com.phonepe.app", "com.phonepe.merchant.android"],
-  paytm_business: ["net.one97.paytm", "com.paytm.business"],
-  google_pay: ["com.google.android.apps.nbu.paisa.user"],
+  phonepe_business: [
+    "com.phonepe.app",
+    "com.phonepe.merchant.android",
+    "com.phonepe.business",
+  ],
+  paytm_business: [
+    "net.one97.paytm",
+    "com.paytm.business",
+    "net.one97.paytm.merchant",
+  ],
+  google_pay: [
+    "com.google.android.apps.nbu.paisa.user",
+    // Google Pay for Business ships separately from the personal app.
+    "com.google.android.apps.nbu.paisa.merchant",
+  ],
 };
 
 /** Messaging apps that show bank SMS, used when the OS won't name a default. */

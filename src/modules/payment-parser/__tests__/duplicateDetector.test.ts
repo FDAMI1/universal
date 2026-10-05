@@ -55,11 +55,33 @@ describe("DuplicateDetector", () => {
     );
   });
 
-  it("does not flag a different source", () => {
+  // One sale is routinely reported twice: by the payment app, then again by
+  // the bank's SMS. The shop should hear it once.
+  it("flags the same amount reported by a second source", () => {
     const detector = new DuplicateDetector(30_000);
-    detector.isDuplicate(makePayment({ source: "phonepe_business" }), 1_000);
+    detector.isDuplicate(
+      makePayment({ source: "other_app", transactionId: null }),
+      1_000,
+    );
     expect(
-      detector.isDuplicate(makePayment({ source: "paytm_business" }), 5_000),
+      detector.isDuplicate(
+        makePayment({ source: "bank_sms", transactionId: null }),
+        5_000,
+      ),
+    ).toBe(true);
+  });
+
+  it("still lets two genuinely separate payments through", () => {
+    const detector = new DuplicateDetector(30_000);
+    detector.isDuplicate(
+      makePayment({ source: "other_app", transactionId: "AAA111" }),
+      1_000,
+    );
+    expect(
+      detector.isDuplicate(
+        makePayment({ source: "bank_sms", transactionId: "BBB222" }),
+        5_000,
+      ),
     ).toBe(false);
   });
 

@@ -49,6 +49,8 @@ function SourceManagementSection() {
   const smsEnabled = useSettingsStore((s) => s.smsEnabled);
   const smsPackageName = useSettingsStore((s) => s.smsPackageName);
   const setSourceEnabled = useSettingsStore((s) => s.setSourceEnabled);
+  const anyAppEnabled = useSettingsStore((s) => s.anyAppEnabled);
+  const setAnyAppEnabled = useSettingsStore((s) => s.setAnyAppEnabled);
   const setGooglePayMode = useSettingsStore((s) => s.setGooglePayMode);
   const setSmsEnabled = useSettingsStore((s) => s.setSmsEnabled);
   const setSmsPackageName = useSettingsStore((s) => s.setSmsPackageName);
@@ -58,6 +60,25 @@ function SourceManagementSection() {
   return (
     <View style={styles.section}>
       <SectionTitle>Source Management</SectionTitle>
+
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>Any payment app</Text>
+          <Switch
+            value={anyAppEnabled}
+            onValueChange={setAnyAppEnabled}
+            trackColor={{ true: colors.primary[500], false: colors.slate[200] }}
+          />
+        </View>
+        <Text style={styles.helperText}>
+          Announces money arriving in any app on this phone — Google Pay for
+          Business, PhonePe, Paytm, your bank, anything — by reading what the
+          notification says rather than which app sent it. Leave this on unless
+          something gets announced that shouldn't be. Money going out, payment
+          requests and offers are never announced.
+        </Text>
+      </View>
+
       <View style={styles.card}>
         {sources.map((source, index) => (
           <View

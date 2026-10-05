@@ -26,6 +26,7 @@ const SOURCE_LABELS: Record<PaymentHistoryEntry["source"], string> = {
   google_pay: "Google Pay",
   google_pay_personal: "Personal Google Pay",
   bank_sms: "Bank SMS",
+  other_app: "Payment app",
 };
 
 function HistoryRow({ entry }: { entry: PaymentHistoryEntry }) {

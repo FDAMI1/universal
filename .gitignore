@@ -42,3 +42,6 @@ yarn-error.*
 
 # PlatformIO
 firmware/.pio/
+
+# PlatformIO .ino preprocessing artifact
+firmware/universal-speaker/*.ino.cpp

@@ -83,6 +83,9 @@ void playerTask(void*) {
   for (;;) {
     if (xQueueReceive(queue, &a, portMAX_DELAY) != pdTRUE) continue;
     busy = true;
+    // The timer only runs while there is audio. Ticking 16,000 times a second
+    // through silence gave an idle tick on the speaker and bought nothing.
+    timerStart(sampleTimer);
     for (uint8_t i = 0; i < a.count; ++i) {
       playClip(a.clips[i]);
       playSilence(CLIP_SAMPLE_RATE * GAP_BETWEEN_CLIPS_MS / 1000);
@@ -91,6 +94,10 @@ void playerTask(void*) {
     // isBusy() stays true until the speaker has actually stopped talking.
     while (ringAvailable() > 0) vTaskDelay(1);
     busy = uxQueueMessagesWaiting(queue) > 0;
+    if (!busy) {
+      timerStop(sampleTimer);
+      writeDac(DAC_MIDPOINT);  // park mid-rail so the amp sees no step
+    }
   }
 }
 
@@ -115,6 +122,7 @@ bool begin(uint8_t gainPercent) {
   if (!sampleTimer) return false;
   timerAttachInterrupt(sampleTimer, &onSampleTick);
   timerAlarm(sampleTimer, 1, true, 0);
+  timerStop(sampleTimer);  // silent until there is something to say
 
   return xTaskCreatePinnedToCore(playerTask, "audio", 4096, nullptr, 3, nullptr, 1) == pdPASS;
 }

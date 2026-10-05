@@ -14,6 +14,7 @@ export type GooglePayMode = "business" | "personal";
 interface SettingsState {
   enabledSources: Record<ToggleableSource, boolean>;
   googlePayMode: GooglePayMode;
+  anyAppEnabled: boolean;
   smsEnabled: boolean;
   smsPackageName: string;
   language: string;
@@ -23,6 +24,7 @@ interface SettingsState {
   voiceStyle: string;
   setSourceEnabled: (source: ToggleableSource, enabled: boolean) => void;
   setGooglePayMode: (mode: GooglePayMode) => void;
+  setAnyAppEnabled: (enabled: boolean) => void;
   setSmsEnabled: (enabled: boolean) => void;
   setSmsPackageName: (packageName: string) => void;
   setLanguage: (language: string) => void;
@@ -41,6 +43,7 @@ export const useSettingsStore = create<SettingsState>()(
         google_pay: true,
       },
       googlePayMode: "business",
+      anyAppEnabled: true,
       smsEnabled: true,
       smsPackageName: "",
       language: "en-IN",
@@ -53,6 +56,7 @@ export const useSettingsStore = create<SettingsState>()(
           enabledSources: { ...state.enabledSources, [source]: enabled },
         })),
       setGooglePayMode: (mode) => set({ googlePayMode: mode }),
+      setAnyAppEnabled: (enabled) => set({ anyAppEnabled: enabled }),
       setSmsEnabled: (enabled) => set({ smsEnabled: enabled }),
       setSmsPackageName: (packageName) => set({ smsPackageName: packageName }),
       setLanguage: (language) => set({ language }),
