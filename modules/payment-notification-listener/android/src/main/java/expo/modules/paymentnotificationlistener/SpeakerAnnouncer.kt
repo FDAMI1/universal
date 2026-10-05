@@ -28,9 +28,11 @@ object SpeakerAnnouncer {
   /** Matches the JS duplicate window: one payment is notified several times. */
   private const val REPEAT_WINDOW_MS = 30_000L
 
-  private var lastAmount = -1L
-  private var lastPayer: String? = null
-  private var lastAt = 0L
+  /** Several payments can be in flight at once, so remembering only the last
+   *  one let an interleaved repeat through. Matches what JS keeps. */
+  private class Seen(val amount: Long, val payer: String?, val at: Long)
+
+  private val seen = ArrayDeque<Seen>()
 
   private val OUTGOING = Regex(
     "\\b(debited|sent|paid to|you paid|spent|withdrawn|transfer(red)? to|requesting|has requested|pay now|due|failed|declined|cancell?ed)\\b",
@@ -107,14 +109,22 @@ object SpeakerAnnouncer {
   @Synchronized
   private fun isRepeat(paise: Long, payer: String?): Boolean {
     val now = System.currentTimeMillis()
-    val repeat = now - lastAt < REPEAT_WINDOW_MS &&
-      paise == lastAmount &&
-      (payer == null || lastPayer == null || payer == lastPayer)
-    lastAmount = paise
-    lastPayer = payer
-    lastAt = now
+    while (seen.isNotEmpty() && now - seen.first().at > REPEAT_WINDOW_MS) {
+      seen.removeFirst()
+    }
+    // Same rule as JS: the payer decides when both sides name one, because two
+    // customers paying the same amount are two sales, not one repeated.
+    val repeat = seen.any { past ->
+      past.amount == paise &&
+        (payer == null || past.payer == null || samePayer(payer, past.payer))
+    }
+    seen.addLast(Seen(paise, payer, now))
     return repeat
   }
+
+  /** One app truncates what another spells out. */
+  private fun samePayer(a: String, b: String): Boolean =
+    a == b || a.startsWith(b) || b.startsWith(a)
 
   private fun post(
     ip: String,
