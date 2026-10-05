@@ -59,6 +59,7 @@ export async function pairWithDevice(
               ipAddress: payload.ipAddress,
               authToken,
               pairedAt: new Date().toISOString(),
+              relay: event.message.relay,
             },
           });
         } else if (event.message.type === "pair_reject") {

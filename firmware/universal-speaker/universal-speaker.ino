@@ -13,6 +13,7 @@
 #include "DeviceConfig.h"
 #include "HindiSpeech.h"
 #include "SetupPortal.h"
+#include "RelayClient.h"
 #include "SpeakerServer.h"
 
 constexpr int BOOT_BUTTON_PIN = 0;
@@ -106,13 +107,18 @@ void setup() {
   Serial.printf(" ok, IP %s\n", WiFi.localIP().toString().c_str());
 
   SpeakerServer::begin();
+  RelayClient::begin();
   AudioPlayer::enqueue(CLIP_WIFI_OK);
   if (!config.isPaired()) announceIpAndPin();
 }
 
 void loop() {
-  if (setupMode) SetupPortal::loop();
-  else SpeakerServer::loop();
+  if (setupMode) {
+    SetupPortal::loop();
+  } else {
+    SpeakerServer::loop();
+    RelayClient::loop();
+  }
   handleBootButton();
   updateLed();
   delay(5);

@@ -9,6 +9,16 @@ import { PaymentObject } from "@shared/types/payment";
  */
 export const PROTOCOL_VERSION = 1;
 
+/** Where to publish for a speaker that isn't on this phone's network. The
+ * topic is a per-speaker secret, handed over only when pairing succeeds. */
+export interface RelayDetails {
+  /** wss://host:port/mqtt */
+  uri: string;
+  key: string;
+  username?: string;
+  password?: string;
+}
+
 export type ClientMessage =
   | { type: "pair"; deviceId: string; authToken: string; pin: string }
   | {
@@ -21,6 +31,16 @@ export type ClientMessage =
   // Releases the speaker so another phone can claim it. The speaker
   // forgets this phone's token and reopens pairing.
   | { type: "unpair"; deviceId: string; authToken: string }
+  | { type: "get_relay"; deviceId: string; authToken: string }
+  | {
+      type: "set_relay";
+      deviceId: string;
+      authToken: string;
+      uri: string;
+      wsUri: string;
+      username: string;
+      password: string;
+    }
   // volume is 0-100; the speaker stores it and keeps it across reboots.
   | {
       type: "set_volume";
@@ -31,12 +51,26 @@ export type ClientMessage =
   | { type: "heartbeat"; deviceId: string; authToken: string };
 
 export type ServerMessage =
-  | { type: "pair_ack"; deviceId: string; deviceName: string }
+  | {
+      type: "pair_ack";
+      deviceId: string;
+      deviceName: string;
+      /** Present when the speaker can be reached over the internet too. */
+      relay?: RelayDetails;
+    }
   | { type: "pair_reject"; reason: string }
   | { type: "payment_ack"; deviceId: string }
   | { type: "heartbeat_ack"; deviceId: string }
   | { type: "volume_ack"; deviceId: string }
   | { type: "unpair_ack"; deviceId: string }
+  | {
+      type: "relay_ack";
+      deviceId: string;
+      key: string;
+      uri?: string;
+      username?: string;
+      password?: string;
+    }
   | { type: "error"; message: string };
 
 export interface WireEnvelope<T> {
@@ -51,6 +85,10 @@ export function wrapMessage<T>(message: T): WireEnvelope<T> {
 export function isCompatibleVersion(v: number): boolean {
   return v === PROTOCOL_VERSION;
 }
+
+/** Relaying is a fallback, so it waits longer than the local path before
+ * giving up: it is a round trip over the internet, not across the room. */
+export const RELAY_TIMEOUT_MS = 10_000;
 
 export const DEFAULT_ESP32_PORT = 8080;
 export const HEARTBEAT_INTERVAL_MS = 15_000;

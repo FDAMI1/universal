@@ -1,4 +1,5 @@
 #pragma once
+#include <Arduino.h>
 #include <stdint.h>
 
 // The phone-facing server on port 8080 (PDR Module 7), speaking the protocol
@@ -19,5 +20,11 @@ void openPairingWindow();
 bool isPairingOpen();
 
 bool hasPhoneConnected();
+
+// Handles one envelope that arrived over the relay instead of the local
+// network. Same parsing, same token check: the relay is another road in, not
+// a way around the checks. Returns the reply to publish back, or "" if there
+// is nothing to say.
+String handleRelayMessage(const char* json, size_t length);
 
 }  // namespace SpeakerServer

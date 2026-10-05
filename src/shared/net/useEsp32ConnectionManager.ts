@@ -80,6 +80,7 @@ export function useEsp32ConnectionManager() {
       pairedDevice.id,
       pairedDevice.authToken,
     );
+    connection.setRelay(pairedDevice.relay);
     connectionRef.current = connection;
     activeConnection = connection;
 
@@ -109,8 +110,30 @@ export function useEsp32ConnectionManager() {
         if (event.status === "connected") {
           lastRelocateAt.current = 0;
           void sendVolumeToSpeaker();
+          // A phone paired before the relay existed knows nothing about it.
+          // Ask once, while we can still reach the speaker locally.
+          if (!pairedDevice.relay) {
+            void connection
+              .send({
+                type: "get_relay",
+                deviceId: pairedDevice.id,
+                authToken: pairedDevice.authToken,
+              })
+              .catch(() => {
+                // An older speaker has no relay to tell us about.
+              });
+          }
         }
         if (event.status === "error") void relocate();
+      }
+      if (event.type === "message" && event.message.type === "relay_ack") {
+        const { uri, key, username, password } = event.message;
+        if (uri && key) {
+          useDeviceStore.getState().setPairedDevice({
+            ...pairedDevice,
+            relay: { uri, key, username, password },
+          });
+        }
       }
       if (event.type === "log") {
         useActivityLogStore.getState().addEntry({

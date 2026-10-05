@@ -7,7 +7,10 @@ import {
   HEARTBEAT_TIMEOUT_MS,
   RECONNECT_BASE_DELAY_MS,
   RECONNECT_MAX_DELAY_MS,
+  RELAY_TIMEOUT_MS,
+  RelayDetails,
 } from "./protocol";
+import { publishOverRelay } from "./mqttPublish";
 import { ConnectionStatus } from "@shared/store/useDeviceStore";
 
 export type ConnectionEvent =
@@ -45,6 +48,7 @@ export class Esp32Connection {
   private heartbeatTimeoutTimer: ReturnType<typeof setTimeout> | null = null;
   private manuallyClosed = false;
   private currentStatus: ConnectionStatus = "disconnected";
+  private relay: RelayDetails | undefined;
 
   constructor(
     private ipAddress: string,
@@ -194,13 +198,36 @@ export class Esp32Connection {
 
   /** Sends over the live WebSocket if connected; otherwise falls back to a
    * one-off HTTP POST to the same device. */
+  /** Where to publish when the speaker is not on this phone's network. */
+  setRelay(relay: RelayDetails | undefined): void {
+    this.relay = relay;
+  }
+
   async send(message: ClientMessage): Promise<void> {
     const envelope = wrapMessage(message);
     if (this.socket && this.currentStatus === "connected") {
       this.socket.send(JSON.stringify(envelope));
       return;
     }
-    await this.sendViaHttp(message);
+    try {
+      await this.sendViaHttp(message);
+    } catch (localError) {
+      // Not on the speaker's network: the shop keeps selling while the owner
+      // is out with the phone, so go round by the relay rather than drop it.
+      if (!this.relay) throw localError;
+      await publishOverRelay(
+        {
+          uri: this.relay.uri,
+          topic: `uspk/${this.relay.key}/in`,
+          username: this.relay.username || undefined,
+          password: this.relay.password || undefined,
+          clientId: `phone-${this.deviceId}-${Date.now() % 100000}`,
+        },
+        JSON.stringify(envelope),
+        RELAY_TIMEOUT_MS,
+      );
+      this.emit({ type: "log", message: "sent via the relay" });
+    }
   }
 
   private async sendViaHttp(message: ClientMessage): Promise<void> {

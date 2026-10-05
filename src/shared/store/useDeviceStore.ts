@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "expo-sqlite/kv-store";
+import { RelayDetails } from "@shared/net/protocol";
 
 export type ConnectionStatus =
   "disconnected" | "connecting" | "connected" | "error";
@@ -11,6 +12,8 @@ export interface PairedDevice {
   ipAddress: string;
   authToken: string;
   pairedAt: string;
+  /** How to reach it when this phone is off the speaker's Wi-Fi. */
+  relay?: RelayDetails;
 }
 
 interface DeviceState {

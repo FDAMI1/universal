@@ -5,6 +5,7 @@
 #include "AudioPlayer.h"
 #include "DeviceConfig.h"
 #include "HindiSpeech.h"
+#include "RelayClient.h"
 
 namespace SpeakerServer {
 namespace {
@@ -101,6 +102,14 @@ Reply handlePair(JsonObjectConst msg) {
   ack["type"] = "pair_ack";
   ack["deviceId"] = config.deviceId;
   ack["deviceName"] = config.deviceName;
+  // So the phone can still reach this speaker from outside the shop's Wi-Fi.
+  if (config.relayEnabled()) {
+    JsonObject relay = ack["relay"].to<JsonObject>();
+    relay["uri"] = config.relayWsUri;  // the phone connects over WebSocket
+    relay["key"] = config.relayKey;
+    relay["username"] = config.relayUser;
+    relay["password"] = config.relayPassword;
+  }
   return {200, envelope(ack)};
 }
 
@@ -151,6 +160,25 @@ Reply handleMessage(JsonVariantConst root) {
     Serial.println("[pair] released by the paired phone");
     return simpleReply("unpair_ack");
   }
+  if (strcmp(type, "get_relay") == 0) {
+    JsonDocument ack;
+    ack["type"] = "relay_ack";
+    ack["deviceId"] = config.deviceId;
+    ack["key"] = config.relayKey;
+    ack["uri"] = config.relayWsUri;
+    ack["username"] = config.relayUser;
+    ack["password"] = config.relayPassword;
+    return {200, envelope(ack)};
+  }
+  if (strcmp(type, "set_relay") == 0) {
+    saveRelay(msg["uri"] | "", msg["wsUri"] | "", msg["username"] | "", msg["password"] | "");
+    Serial.printf("[relay] broker set to \"%s\"\n", config.relayUri.c_str());
+    JsonDocument ack;
+    ack["type"] = "relay_ack";
+    ack["deviceId"] = config.deviceId;
+    ack["key"] = config.relayKey;
+    return {200, envelope(ack)};
+  }
   if (strcmp(type, "set_volume") == 0) {
     if (!msg["volume"].is<int>()) return errorReply(422, "volume must be a number from 0 to 100");
     const int requested = msg["volume"].as<int>();
@@ -184,6 +212,14 @@ void onWsEvent(AsyncWebSocket*, AsyncWebSocketClient* client, AwsEventType type,
 
 }  // namespace
 
+String handleRelayMessage(const char* json, size_t length) {
+  JsonDocument doc;
+  Reply reply = deserializeJson(doc, json, length)
+                    ? errorReply(400, "invalid JSON")
+                    : handleMessage(doc.as<JsonVariantConst>());
+  return reply.body;
+}
+
 void begin() {
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -203,6 +239,7 @@ void begin() {
     doc["claimed"] = config.isPaired();
     doc["pairingOpen"] = isPairingOpen();
     doc["speaking"] = AudioPlayer::isBusy();
+    doc["relay"] = RelayClient::isConnected();
     String out;
     serializeJson(doc, out);
     request->send(200, "application/json", out);
