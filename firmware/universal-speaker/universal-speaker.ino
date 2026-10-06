@@ -64,14 +64,16 @@ void handleBootButton() {
   }
 }
 
+// A short flash rather than an even on/off blink: the LED shares the 5V rail
+// with the amplifier, and switching it half the time put an audible tick
+// through the speaker twice a second while it waited for a phone.
 void updateLed() {
   const uint32_t now = millis();
   bool on;
-  if (setupMode) on = (now / 150) % 2;
+  if (setupMode) on = (now % 400) < 60;
   else if (SpeakerServer::hasPhoneConnected()) on = true;
-  else on = (now / 1000) % 2;
-  digitalWrite(LED_PIN, LOW);  // TEMPORARY TEST: LED never switches
-  (void)on;
+  else on = (now % 2000) < 40;
+  digitalWrite(LED_PIN, on ? HIGH : LOW);
 }
 
 void setup() {
