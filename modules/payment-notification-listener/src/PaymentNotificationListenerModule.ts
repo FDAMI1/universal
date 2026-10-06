@@ -28,6 +28,8 @@ declare class PaymentNotificationListenerModule extends NativeModule<PaymentNoti
   getDefaultSmsPackage(): string | null;
   /** Where the fallback announcer should send payments; empty strings clear it. */
   setSpeakerTarget(ip: string, deviceId: string, token: string): void;
+  /** Where to publish when the speaker is off this phone's network. */
+  setRelayTarget(uri: string, key: string, user: string, password: string): void;
   /** Tells the native side JS is still running; it announces itself if this stops. */
   jsHeartbeat(): void;
   /** Troubleshooting: forward notifications from every app, not just payment ones. */

@@ -133,6 +133,14 @@ export function useEsp32ConnectionManager() {
             ...pairedDevice,
             relay: { uri, key, username, password },
           });
+          // The native fallback is what runs while the phone is locked, which
+          // is exactly when its owner is out and the relay is needed.
+          PaymentNotificationListener.setRelayTarget(
+            uri.replace("wss://", "mqtts://").replace("/mqtt", ":8883"),
+            key,
+            username ?? "",
+            password ?? "",
+          );
         }
       }
       if (event.type === "log") {

@@ -56,6 +56,22 @@ object SpeakerAnnouncer {
       .apply()
   }
 
+  /** The speaker's broker, for when the phone is not on its network. */
+  fun saveRelay(
+    context: Context,
+    uri: String,
+    key: String,
+    user: String,
+    password: String,
+  ) {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+      .putString("relayUri", uri)
+      .putString("relayKey", key)
+      .putString("relayUser", user)
+      .putString("relayPass", password)
+      .apply()
+  }
+
   fun clearTarget(context: Context) {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().clear().apply()
   }
@@ -82,7 +98,64 @@ object SpeakerAnnouncer {
       return true
     }
 
-    return post(ip, deviceId, token, paise, payer)
+    val body = paymentEnvelope(deviceId, token, paise, payer)
+    if (post(ip, body)) {
+      // While we can reach it locally, pick up how to reach it from outside.
+      if (prefs.getString("relayUri", null).isNullOrEmpty()) {
+        fetchRelayDetails(context, ip, deviceId, token)
+      }
+      return true
+    }
+
+    val relayUri = prefs.getString("relayUri", null)
+    val relayKey = prefs.getString("relayKey", null)
+    if (relayUri.isNullOrEmpty() || relayKey.isNullOrEmpty()) {
+      Log.w(TAG, "native: speaker unreachable and no relay is configured")
+      return false
+    }
+    return MqttRelay.publish(
+      relayUri,
+      "uspk/$relayKey/in",
+      body,
+      prefs.getString("relayUser", ""),
+      prefs.getString("relayPass", ""),
+      "phone-$deviceId-${System.currentTimeMillis() % 100000}",
+    )
+  }
+
+  /** Asks the speaker for its broker details and keeps them for later. */
+  private fun fetchRelayDetails(context: Context, ip: String, deviceId: String, token: String) {
+    val request = "{\"v\":1,\"message\":{\"type\":\"get_relay\",\"deviceId\":\"" +
+      deviceId + "\",\"authToken\":\"" + token + "\"}}"
+    val reply = postForReply(ip, request) ?: return
+    val uri = jsonString(reply, "uri") ?: return
+    val key = jsonString(reply, "key") ?: return
+    saveRelay(context, uri.replace("wss://", "mqtts://").replace("/mqtt", ":8883"),
+      key, jsonString(reply, "username") ?: "", jsonString(reply, "password") ?: "")
+    Log.i(TAG, "native: learned how to reach the speaker from outside")
+  }
+
+  /** Small enough that a full JSON parser would be more code than this. */
+  private fun jsonString(json: String, field: String): String? {
+    val match = Regex("\"" + field + "\"\\s*:\\s*\"([^\"]*)\"").find(json) ?: return null
+    return match.groupValues[1].ifEmpty { null }
+  }
+
+  private fun paymentEnvelope(
+    deviceId: String,
+    token: String,
+    paise: Long,
+    payer: String?,
+  ): String = buildString {
+    append("{\"v\":1,\"message\":{\"type\":\"payment\",\"deviceId\":\"").append(deviceId)
+    append("\",\"authToken\":\"").append(token)
+    append("\",\"payment\":{\"deviceId\":\"").append(deviceId)
+    append("\",\"amount\":").append(paise)
+    append(",\"currency\":\"INR\",\"payer\":")
+    if (payer == null) append("null") else append("\"").append(payer.replace("\"", "")).append("\"")
+    append(",\"source\":\"other_app\",\"paymentType\":\"incoming\",\"timestamp\":\"")
+    append(java.time.Instant.now().toString())
+    append("\",\"transactionId\":null,\"status\":\"success\"}}}")
   }
 
   /** Payment apps write amounts in styled digits (PhonePe uses U+1D7D9 and
@@ -126,25 +199,7 @@ object SpeakerAnnouncer {
   private fun samePayer(a: String, b: String): Boolean =
     a == b || a.startsWith(b) || b.startsWith(a)
 
-  private fun post(
-    ip: String,
-    deviceId: String,
-    token: String,
-    paise: Long,
-    payer: String?,
-  ): Boolean {
-    val body = buildString {
-      append("{\"v\":1,\"message\":{\"type\":\"payment\",\"deviceId\":\"").append(deviceId)
-      append("\",\"authToken\":\"").append(token)
-      append("\",\"payment\":{\"deviceId\":\"").append(deviceId)
-      append("\",\"amount\":").append(paise)
-      append(",\"currency\":\"INR\",\"payer\":")
-      if (payer == null) append("null") else append("\"").append(payer.replace("\"", "")).append("\"")
-      append(",\"source\":\"other_app\",\"paymentType\":\"incoming\",\"timestamp\":\"")
-      append(java.time.Instant.now().toString())
-      append("\",\"transactionId\":null,\"status\":\"success\"}}}")
-    }
-
+  private fun post(ip: String, body: String): Boolean {
     return try {
       val connection = (URL("http://$ip:8080/message").openConnection() as HttpURLConnection).apply {
         requestMethod = "POST"
@@ -156,11 +211,34 @@ object SpeakerAnnouncer {
       connection.outputStream.use { it.write(body.toByteArray()) }
       val code = connection.responseCode
       connection.disconnect()
-      Log.i(TAG, "native announce of $paise paise -> HTTP $code")
+      Log.i(TAG, "native: posted to the speaker locally -> HTTP $code")
       code in 200..299
     } catch (e: Exception) {
-      Log.w(TAG, "native announce failed: ${e.message}")
+      Log.w(TAG, "native: the speaker is not reachable locally (${e.message})")
       false
+    }
+  }
+
+  /** Same POST, but hands back the speaker's answer. */
+  private fun postForReply(ip: String, body: String): String? {
+    return try {
+      val connection = (URL("http://$ip:8080/message").openConnection() as HttpURLConnection).apply {
+        requestMethod = "POST"
+        connectTimeout = TIMEOUT_MS
+        readTimeout = TIMEOUT_MS
+        doOutput = true
+        setRequestProperty("Content-Type", "application/json")
+      }
+      connection.outputStream.use { it.write(body.toByteArray()) }
+      val reply = if (connection.responseCode in 200..299) {
+        connection.inputStream.bufferedReader().use { it.readText() }
+      } else {
+        null
+      }
+      connection.disconnect()
+      reply
+    } catch (e: Exception) {
+      null
     }
   }
 }

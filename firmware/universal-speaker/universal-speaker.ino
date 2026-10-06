@@ -70,7 +70,8 @@ void updateLed() {
   if (setupMode) on = (now / 150) % 2;
   else if (SpeakerServer::hasPhoneConnected()) on = true;
   else on = (now / 1000) % 2;
-  digitalWrite(LED_PIN, on ? HIGH : LOW);
+  digitalWrite(LED_PIN, LOW);  // TEMPORARY TEST: LED never switches
+  (void)on;
 }
 
 void setup() {

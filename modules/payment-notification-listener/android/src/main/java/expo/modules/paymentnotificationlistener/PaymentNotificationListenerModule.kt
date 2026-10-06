@@ -146,6 +146,15 @@ class PaymentNotificationListenerModule : Module() {
     // JS calls this on a timer while it is running. Android freezes the JS
     // thread when the phone is locked, and the beat stopping is what tells the
     // native side to announce payments itself.
+    // JS learns the broker details when it pairs or asks; the native side
+    // needs its own copy for when JS is frozen and the phone is away.
+    Function("setRelayTarget") { uri: String, key: String, user: String, password: String ->
+      val ctx = appContext.reactContext
+      if (ctx != null) {
+        SpeakerAnnouncer.saveRelay(ctx, uri, key, user, password)
+      }
+    }
+
     Function("jsHeartbeat") {
       PaymentBridgeEmitter.heartbeat()
     }
