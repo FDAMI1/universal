@@ -128,10 +128,11 @@ object SpeakerAnnouncer {
     val request = "{\"v\":1,\"message\":{\"type\":\"get_relay\",\"deviceId\":\"" +
       deviceId + "\",\"authToken\":\"" + token + "\"}}"
     val reply = postForReply(ip, request) ?: return
-    val uri = jsonString(reply, "uri") ?: return
     val key = jsonString(reply, "key") ?: return
-    saveRelay(context, uri.replace("wss://", "mqtts://").replace("/mqtt", ":8883"),
-      key, jsonString(reply, "username") ?: "", jsonString(reply, "password") ?: "")
+    // The speaker says how to reach its broker over plain TLS; deriving it
+    // from the WebSocket address produced "host:8084:8883" and a silent fail.
+    val uri = jsonString(reply, "mqttUri") ?: return
+    saveRelay(context, uri, key, jsonString(reply, "username") ?: "", jsonString(reply, "password") ?: "")
     Log.i(TAG, "native: learned how to reach the speaker from outside")
   }
 

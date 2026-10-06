@@ -127,20 +127,22 @@ export function useEsp32ConnectionManager() {
         if (event.status === "error") void relocate();
       }
       if (event.type === "message" && event.message.type === "relay_ack") {
-        const { uri, key, username, password } = event.message;
+        const { uri, mqttUri, key, username, password } = event.message;
         if (uri && key) {
           useDeviceStore.getState().setPairedDevice({
             ...pairedDevice,
-            relay: { uri, key, username, password },
+            relay: { uri, mqttUri, key, username, password },
           });
           // The native fallback is what runs while the phone is locked, which
           // is exactly when its owner is out and the relay is needed.
-          PaymentNotificationListener.setRelayTarget(
-            uri.replace("wss://", "mqtts://").replace("/mqtt", ":8883"),
-            key,
-            username ?? "",
-            password ?? "",
-          );
+          if (mqttUri) {
+            PaymentNotificationListener.setRelayTarget(
+              mqttUri,
+              key,
+              username ?? "",
+              password ?? "",
+            );
+          }
         }
       }
       if (event.type === "log") {

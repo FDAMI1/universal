@@ -106,6 +106,7 @@ Reply handlePair(JsonObjectConst msg) {
   if (config.relayEnabled()) {
     JsonObject relay = ack["relay"].to<JsonObject>();
     relay["uri"] = config.relayWsUri;  // the phone connects over WebSocket
+    relay["mqttUri"] = config.relayUri;  // and natively over plain TLS
     relay["key"] = config.relayKey;
     relay["username"] = config.relayUser;
     relay["password"] = config.relayPassword;
@@ -165,7 +166,8 @@ Reply handleMessage(JsonVariantConst root) {
     ack["type"] = "relay_ack";
     ack["deviceId"] = config.deviceId;
     ack["key"] = config.relayKey;
-    ack["uri"] = config.relayWsUri;
+    ack["uri"] = config.relayWsUri;      // WebSocket, for the app's JS client
+    ack["mqttUri"] = config.relayUri;    // plain TLS, for the native fallback
     ack["username"] = config.relayUser;
     ack["password"] = config.relayPassword;
     return {200, envelope(ack)};

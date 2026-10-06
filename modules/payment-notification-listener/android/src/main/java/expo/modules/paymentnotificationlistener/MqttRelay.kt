@@ -102,7 +102,11 @@ object MqttRelay {
     var socket: SSLSocket? = null
     return try {
       val parsed = URI(uri)
-      val host = parsed.host ?: return false
+      val host = parsed.host
+      if (host == null) {
+        Log.w(TAG, "relay: cannot parse broker address '$uri'")
+        return false
+      }
       val port = if (parsed.port > 0) parsed.port else 8883
 
       socket = (SSLSocketFactory.getDefault() as SSLSocketFactory)

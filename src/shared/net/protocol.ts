@@ -14,6 +14,8 @@ export const PROTOCOL_VERSION = 1;
 export interface RelayDetails {
   /** wss://host:port/mqtt */
   uri: string;
+  /** mqtts://host:port, for the native side */
+  mqttUri?: string;
   key: string;
   username?: string;
   password?: string;
@@ -68,6 +70,7 @@ export type ServerMessage =
       deviceId: string;
       key: string;
       uri?: string;
+      mqttUri?: string;
       username?: string;
       password?: string;
     }
