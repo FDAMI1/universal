@@ -6,6 +6,7 @@ import { useActivityLogStore } from "@shared/store/useActivityLogStore";
 import { Esp32Connection } from "./Esp32Connection";
 import { DEFAULT_ESP32_PORT } from "./protocol";
 import { generateId } from "@shared/utils/id";
+import * as Network from "expo-network";
 import { findSpeakerById } from "@modules/pairing/api/discovery";
 import { PaymentNotificationListener } from "@native/payment-notification-listener";
 
@@ -86,6 +87,11 @@ export function useEsp32ConnectionManager() {
 
     const relocate = async () => {
       if (Date.now() - lastRelocateAt.current < RELOCATE_COOLDOWN_MS) return;
+      // The sweep walks every address on the phone's own network. On mobile
+      // data that is the carrier's network, not the shop's: slow, pointless,
+      // and not ours to scan.
+      const network = await Network.getNetworkStateAsync().catch(() => null);
+      if (network?.type !== Network.NetworkStateType.WIFI) return;
       lastRelocateAt.current = Date.now();
       const found = await findSpeakerById(pairedDevice.id).catch(() => null);
       if (!found || found.ipAddress === pairedDevice.ipAddress) return;

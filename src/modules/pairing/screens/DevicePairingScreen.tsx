@@ -135,8 +135,18 @@ function PairedDeviceCard() {
         </Pressable>
       </View>
       <StatusBadge
-        label={connectionStatus === "connected" ? "Connected" : "Not connected"}
-        tone={connectionStatus === "connected" ? "success" : "neutral"}
+        label={
+          connectionStatus === "connected"
+            ? "Connected"
+            : connectionStatus === "relay"
+              ? "Connected via internet"
+              : "Not connected"
+        }
+        tone={
+          connectionStatus === "connected" || connectionStatus === "relay"
+            ? "success"
+            : "neutral"
+        }
       />
       <Text style={styles.cardMeta}>{pairedDevice.ipAddress}</Text>
 

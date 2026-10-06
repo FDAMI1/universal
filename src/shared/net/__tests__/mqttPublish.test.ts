@@ -96,3 +96,44 @@ describe("PUBACK", () => {
     expect(isPuback(Uint8Array.from([0x40]))).toBe(false);
   });
 });
+
+import { buildSubscribe, isSuback, parsePublish } from "../mqttPublish";
+
+describe("SUBSCRIBE", () => {
+  it("asks for QoS 1 on the reply topic with a packet id", () => {
+    const packet = bytes(buildSubscribe("ab", 1));
+    expect(packet[0]).toBe(0x82);
+    expect(packet.slice(2)).toEqual([0x00, 0x01, 0x00, 0x02, 0x61, 0x62, 0x01]);
+  });
+
+  it("recognises the broker's SUBACK", () => {
+    expect(isSuback(Uint8Array.from([0x90, 0x03, 0x00, 0x01, 0x01]))).toBe(true);
+    expect(isSuback(Uint8Array.from([0x40, 0x02, 0x00, 0x01]))).toBe(false);
+  });
+});
+
+describe("incoming PUBLISH", () => {
+  it("decodes topic and payload of a QoS 0 publish", () => {
+    const packet = Uint8Array.from([
+      0x30, 0x06, 0x00, 0x02, 0x61, 0x62, 0x68, 0x69,
+    ]);
+    expect(parsePublish(packet)).toEqual({ topic: "ab", payload: "hi", packetId: null });
+  });
+
+  it("skips the packet id on a QoS 1 publish", () => {
+    const packet = Uint8Array.from([
+      0x32, 0x08, 0x00, 0x02, 0x61, 0x62, 0x00, 0x07, 0x68, 0x69,
+    ]);
+    expect(parsePublish(packet)).toEqual({ topic: "ab", payload: "hi", packetId: 7 });
+  });
+
+  it("decodes the speaker's real reply envelope, including non-ASCII", () => {
+    const reply = '{"v":1,"message":{"type":"heartbeat_ack","note":"₹"}}';
+    const packet = buildPublish("uspk/k/out", reply, 3);
+    expect(parsePublish(packet)?.payload).toBe(reply);
+  });
+
+  it("ignores packets that are not a PUBLISH", () => {
+    expect(parsePublish(Uint8Array.from([0x20, 0x02, 0x00, 0x00]))).toBeNull();
+  });
+});

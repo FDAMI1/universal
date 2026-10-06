@@ -3,8 +3,14 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "expo-sqlite/kv-store";
 import { RelayDetails } from "@shared/net/protocol";
 
+/** "relay" means the speaker answered through the internet broker: this phone
+ * is off the shop's Wi-Fi, but announcements will still get through. */
 export type ConnectionStatus =
-  "disconnected" | "connecting" | "connected" | "error";
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "relay"
+  | "error";
 
 export interface PairedDevice {
   id: string;

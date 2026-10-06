@@ -125,6 +125,84 @@ export function isPuback(packet: Uint8Array): boolean {
   return packet.length >= 4 && (packet[0] & 0xf0) === PUBACK;
 }
 
+const SUBSCRIBE = 0x80;
+const SUBACK = 0x90;
+
+/** QoS 1 subscription, so the reply is not silently dropped on the way. */
+export function buildSubscribe(topic: string, packetId: number): Uint8Array {
+  const body = [
+    (packetId >> 8) & 0xff,
+    packetId & 0xff,
+    ...encodeString(topic),
+    0x01, // requested QoS
+  ];
+  return Uint8Array.from([SUBSCRIBE | 0x02, ...encodeLength(body.length), ...body]);
+}
+
+export function isSuback(packet: Uint8Array): boolean {
+  return packet.length >= 5 && (packet[0] & 0xf0) === SUBACK;
+}
+
+/** Decodes a PUBLISH the broker sends us. Null for any other packet. */
+export function parsePublish(
+  packet: Uint8Array,
+): { topic: string; payload: string; packetId: number | null } | null {
+  if (packet.length < 2 || (packet[0] & 0xf0) !== PUBLISH) return null;
+  const qos = (packet[0] >> 1) & 0x03;
+
+  // Walk past the variable-length Remaining Length field.
+  let index = 1;
+  let multiplier = 1;
+  let remaining = 0;
+  for (;;) {
+    const digit = packet[index++];
+    remaining += (digit & 0x7f) * multiplier;
+    if ((digit & 0x80) === 0) break;
+    multiplier *= 128;
+    if (index > 4) return null;
+  }
+
+  const topicLength = (packet[index] << 8) | packet[index + 1];
+  index += 2;
+  const topic = utf8Decode(packet.subarray(index, index + topicLength));
+  index += topicLength;
+
+  let packetId: number | null = null;
+  if (qos > 0) {
+    packetId = (packet[index] << 8) | packet[index + 1];
+    index += 2;
+  }
+  return { topic, payload: utf8Decode(packet.subarray(index)), packetId };
+}
+
+function utf8Decode(bytes: Uint8Array): string {
+  let out = "";
+  for (let i = 0; i < bytes.length; ) {
+    const b0 = bytes[i];
+    if (b0 < 0x80) {
+      out += String.fromCharCode(b0);
+      i += 1;
+    } else if (b0 < 0xe0) {
+      out += String.fromCharCode(((b0 & 0x1f) << 6) | (bytes[i + 1] & 0x3f));
+      i += 2;
+    } else if (b0 < 0xf0) {
+      out += String.fromCharCode(
+        ((b0 & 0x0f) << 12) | ((bytes[i + 1] & 0x3f) << 6) | (bytes[i + 2] & 0x3f),
+      );
+      i += 3;
+    } else {
+      const code =
+        ((b0 & 0x07) << 18) |
+        ((bytes[i + 1] & 0x3f) << 12) |
+        ((bytes[i + 2] & 0x3f) << 6) |
+        (bytes[i + 3] & 0x3f);
+      out += String.fromCodePoint(code);
+      i += 4;
+    }
+  }
+  return out;
+}
+
 export interface RelayTarget {
   /** wss://host:port/mqtt */
   uri: string;
@@ -189,6 +267,84 @@ export function publishOverRelay(
           socket.send(Uint8Array.from([DISCONNECT, 0x00]));
           finish();
         }
+      } catch (error) {
+        finish(error instanceof Error ? error : new MqttPublishError(String(error)));
+      }
+    };
+
+    socket.onerror = () =>
+      finish(new MqttPublishError("could not reach the relay"));
+    socket.onclose = () =>
+      finish(new MqttPublishError("the relay closed the connection"));
+  });
+}
+
+/**
+ * Publishes a request and waits for the speaker's reply on `replyTopic`.
+ * This is how the app finds out whether the speaker is actually reachable
+ * through the relay, as opposed to the broker merely accepting the message.
+ */
+export function requestOverRelay(
+  target: RelayTarget,
+  payload: string,
+  replyTopic: string,
+  timeoutMs = 10_000,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(target.uri, ["mqtt"]);
+    } catch (error) {
+      reject(new MqttPublishError(String(error)));
+      return;
+    }
+    socket.binaryType = "arraybuffer";
+
+    let settled = false;
+    const finish = (error?: Error, reply?: string) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        socket.send(Uint8Array.from([DISCONNECT, 0x00]));
+        socket.close();
+      } catch {
+        // Already closing; the result is decided either way.
+      }
+      error ? reject(error) : resolve(reply ?? "");
+    };
+
+    const timer = setTimeout(
+      () => finish(new MqttPublishError("the speaker did not answer over the relay")),
+      timeoutMs,
+    );
+
+    socket.onopen = () => {
+      socket.send(buildConnect(target.clientId, target.username, target.password));
+    };
+
+    socket.onmessage = (event) => {
+      const packet = new Uint8Array(event.data as ArrayBuffer);
+      try {
+        if ((packet[0] & 0xf0) === CONNACK) {
+          readConnack(packet);
+          socket.send(buildSubscribe(replyTopic, 1));
+          return;
+        }
+        if (isSuback(packet)) {
+          socket.send(buildPublish(target.topic, payload, 2));
+          return;
+        }
+        const incoming = parsePublish(packet);
+        if (incoming && incoming.topic === replyTopic) {
+          if (incoming.packetId !== null) {
+            socket.send(
+              Uint8Array.from([PUBACK, 0x02, incoming.packetId >> 8, incoming.packetId & 0xff]),
+            );
+          }
+          finish(undefined, incoming.payload);
+        }
+        // PUBACK for our own publish needs no action.
       } catch (error) {
         finish(error instanceof Error ? error : new MqttPublishError(String(error)));
       }

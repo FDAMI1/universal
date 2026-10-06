@@ -10,7 +10,10 @@ import {
   RELAY_TIMEOUT_MS,
   RelayDetails,
 } from "./protocol";
-import { publishOverRelay } from "./mqttPublish";
+import { publishOverRelay, requestOverRelay, RelayTarget } from "./mqttPublish";
+
+/** Re-checking the relay more often than this just burns the phone's data. */
+const RELAY_PROBE_INTERVAL_MS = 20_000;
 import { ConnectionStatus } from "@shared/store/useDeviceStore";
 
 export type ConnectionEvent =
@@ -155,6 +158,60 @@ export class Esp32Connection {
     const delay = computeReconnectDelayMs(this.reconnectAttempt);
     this.reconnectAttempt += 1;
     this.reconnectTimer = setTimeout(() => this.openSocket(), delay);
+    // The local socket is down. If the speaker can be reached through the
+    // relay instead, say so, rather than reporting "disconnected" to someone
+    // whose payments are in fact still being announced.
+    void this.probeRelay();
+  }
+
+  private relayProbeInFlight = false;
+  private lastRelayProbeAt = 0;
+
+  /** Asks the speaker, via the broker, whether it is there. */
+  private async probeRelay(): Promise<void> {
+    if (!this.relay || this.relayProbeInFlight) return;
+    if (Date.now() - this.lastRelayProbeAt < RELAY_PROBE_INTERVAL_MS) return;
+    this.relayProbeInFlight = true;
+    this.lastRelayProbeAt = Date.now();
+    try {
+      const reply = await requestOverRelay(
+        this.relayTarget(),
+        JSON.stringify(
+          wrapMessage({
+            type: "heartbeat",
+            deviceId: this.deviceId,
+            authToken: this.authToken,
+          }),
+        ),
+        `uspk/${this.relay.key}/out`,
+        RELAY_TIMEOUT_MS,
+      );
+      const message = this.parseServerMessage(reply);
+      if (message?.type === "heartbeat_ack" && this.currentStatus !== "connected") {
+        if (this.currentStatus !== "relay") {
+          this.emit({ type: "log", message: "speaker reachable via the relay" });
+        }
+        this.emit({ type: "status", status: "relay" });
+      }
+    } catch (error) {
+      if (this.currentStatus === "relay") {
+        this.emit({ type: "status", status: "disconnected" });
+        this.emit({ type: "log", message: `relay check failed: ${String(error)}` });
+      }
+    } finally {
+      this.relayProbeInFlight = false;
+    }
+  }
+
+  private relayTarget(): RelayTarget {
+    const relay = this.relay!;
+    return {
+      uri: relay.uri,
+      topic: `uspk/${relay.key}/in`,
+      username: relay.username || undefined,
+      password: relay.password || undefined,
+      clientId: `phone-${this.deviceId}-${Date.now() % 100000}`,
+    };
   }
 
   private startHeartbeat(): void {
@@ -216,13 +273,7 @@ export class Esp32Connection {
       // is out with the phone, so go round by the relay rather than drop it.
       if (!this.relay) throw localError;
       await publishOverRelay(
-        {
-          uri: this.relay.uri,
-          topic: `uspk/${this.relay.key}/in`,
-          username: this.relay.username || undefined,
-          password: this.relay.password || undefined,
-          clientId: `phone-${this.deviceId}-${Date.now() % 100000}`,
-        },
+        this.relayTarget(),
         JSON.stringify(envelope),
         RELAY_TIMEOUT_MS,
       );

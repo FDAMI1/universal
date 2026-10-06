@@ -34,7 +34,9 @@ import {
 
 export default function DashboardScreen() {
   const { pairedDevice, connectionStatus } = useDeviceStore();
-  const isConnected = connectionStatus === "connected";
+  // Reachable through the relay counts: announcements still get through.
+  const viaRelay = connectionStatus === "relay";
+  const isConnected = connectionStatus === "connected" || viaRelay;
   const {
     count: todayCount,
     totalPaise: todayTotalPaise,
@@ -97,7 +99,13 @@ export default function DashboardScreen() {
           <Text style={styles.cardTitle}>Connection</Text>
         </View>
         <StatusBadge
-          label={isConnected ? "Connected" : "Disconnected"}
+          label={
+            viaRelay
+              ? "Connected via internet"
+              : isConnected
+                ? "Connected"
+                : "Disconnected"
+          }
           tone={isConnected ? "success" : "neutral"}
         />
         <Text style={styles.cardMeta}>
