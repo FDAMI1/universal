@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <string.h>
 #include "driver/dac_oneshot.h"
+#include "driver/rtc_io.h"
 #include "soc/rtc_io_reg.h"
 #include "soc/sens_reg.h"
 
@@ -32,6 +33,7 @@ struct Announcement {
 
 QueueHandle_t queue = nullptr;
 hw_timer_t* sampleTimer = nullptr;
+dac_oneshot_handle_t dacPad = nullptr;
 volatile bool busy = false;
 uint8_t gain = 100;
 
@@ -48,6 +50,29 @@ inline size_t ringSpace() { return RING_MASK - ringAvailable(); }
 // touches flash, neither of which is safe from an interrupt.
 inline void IRAM_ATTR writeDac(uint8_t value) {
   REG_SET_FIELD(RTC_IO_PAD_DAC1_REG, RTC_IO_PDAC1_DAC, value);
+}
+
+/** Powers the analog output up for an announcement. */
+void wakeDac() {
+  if (dacPad != nullptr) return;
+  dac_oneshot_config_t padConfig = {.chan_id = DAC_CHAN_0};
+  if (dac_oneshot_new_channel(&padConfig, &dacPad) == ESP_OK) {
+    dac_oneshot_output_voltage(dacPad, DAC_MIDPOINT);
+  }
+}
+
+/** Shuts it down again and pins the output low, so nothing is left floating
+ * for the radio to couple into. */
+void sleepDac() {
+  if (dacPad == nullptr) return;
+  dac_oneshot_del_channel(dacPad);
+  dacPad = nullptr;
+  // GPIO25 is an RTC pad: deleting the DAC channel leaves it in analog mode,
+  // where pinMode() has no effect and the pin floats — an aerial feeding the
+  // amplifier. Hand it back to the digital mux first, then it can be driven.
+  rtc_gpio_deinit(static_cast<gpio_num_t>(DAC_PIN));
+  pinMode(DAC_PIN, OUTPUT);
+  digitalWrite(DAC_PIN, LOW);
 }
 
 void IRAM_ATTR onSampleTick() {
@@ -85,6 +110,7 @@ void playerTask(void*) {
     busy = true;
     // The timer only runs while there is audio. Ticking 16,000 times a second
     // through silence gave an idle tick on the speaker and bought nothing.
+    wakeDac();
     timerStart(sampleTimer);
     for (uint8_t i = 0; i < a.count; ++i) {
       playClip(a.clips[i]);
@@ -96,7 +122,7 @@ void playerTask(void*) {
     busy = uxQueueMessagesWaiting(queue) > 0;
     if (!busy) {
       timerStop(sampleTimer);
-      writeDac(DAC_MIDPOINT);  // park mid-rail so the amp sees no step
+      sleepDac();
     }
   }
 }
@@ -106,12 +132,9 @@ void playerTask(void*) {
 bool begin(uint8_t gainPercent) {
   gain = gainPercent > 100 ? 100 : gainPercent;
 
-  // Configures and powers up the DAC pad. After this the ISR drives the output
-  // register itself.
-  dac_oneshot_handle_t pad = nullptr;
-  dac_oneshot_config_t padConfig = {.chan_id = DAC_CHAN_0};
-  if (dac_oneshot_new_channel(&padConfig, &pad) != ESP_OK) return false;
-  dac_oneshot_output_voltage(pad, DAC_MIDPOINT);
+  // Starts silent: the output is only powered while something is being said.
+  pinMode(DAC_PIN, OUTPUT);
+  digitalWrite(DAC_PIN, LOW);
 
   queue = xQueueCreate(QUEUE_LENGTH, sizeof(Announcement));
   if (!queue) return false;
